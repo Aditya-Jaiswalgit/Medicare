@@ -1,17 +1,17 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { UserRole } from '@/types/clinic';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { UserRole } from "@/types/clinic";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Stethoscope,
   Mail,
@@ -24,37 +24,43 @@ import {
   TestTube,
   DollarSign,
   User,
-} from 'lucide-react';
+} from "lucide-react";
 
 const roles: { value: UserRole; label: string; icon: React.ElementType }[] = [
-  { value: 'clinic_admin', label: 'Clinic Admin', icon: UserCog },
-  { value: 'doctor', label: 'Doctor', icon: Stethoscope },
-  { value: 'receptionist', label: 'Receptionist', icon: Users },
-  { value: 'pharmacist', label: 'Pharmacist', icon: Pill },
-  { value: 'lab_technician', label: 'Lab Technician', icon: TestTube },
-  { value: 'accountant', label: 'Accountant', icon: DollarSign },
-  { value: 'patient', label: 'Patient', icon: User },
+  { value: "clinic_admin", label: "Clinic Admin", icon: UserCog },
+  { value: "doctor", label: "Doctor", icon: Stethoscope },
+  { value: "receptionist", label: "Receptionist", icon: Users },
+  { value: "pharmacist", label: "Pharmacist", icon: Pill },
+  { value: "lab_technician", label: "Lab Technician", icon: TestTube },
+  { value: "accountant", label: "Accountant", icon: DollarSign },
+  { value: "patient", label: "Patient", icon: User },
 ];
 
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('doctor');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<UserRole>("doctor");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
+
+    if (!email || !password) {
+      setError("Email and password are required");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       await login(email, password, role);
-      navigate('/dashboard');
+      navigate("/dashboard");
     } catch (err) {
-      setError('Invalid credentials');
+      setError("Invalid credentials");
     } finally {
       setIsLoading(false);
     }
@@ -66,7 +72,7 @@ export default function Login() {
       <div className="hidden lg:flex lg:w-1/2 gradient-hero relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_70%,rgba(45,212,191,0.15),transparent_50%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(45,212,191,0.1),transparent_50%)]" />
-        
+
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
@@ -81,20 +87,22 @@ export default function Login() {
           <div className="space-y-8 animate-fade-in">
             <div>
               <h2 className="text-4xl font-bold text-white leading-tight">
-                Streamline Your<br />
+                Streamline Your
+                <br />
                 <span className="text-gradient">Healthcare Practice</span>
               </h2>
               <p className="text-lg text-white/70 mt-4 max-w-md">
-                Manage appointments, patients, prescriptions, and billing all in one place.
+                Manage appointments, patients, prescriptions, and billing all in
+                one place.
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4 max-w-md">
               {[
-                { icon: Users, label: 'Patient Management' },
-                { icon: Stethoscope, label: 'EMR System' },
-                { icon: DollarSign, label: 'Billing & Invoicing' },
-                { icon: Shield, label: 'Secure & HIPAA' },
+                { icon: Users, label: "Patient Management" },
+                { icon: Stethoscope, label: "EMR System" },
+                { icon: DollarSign, label: "Billing & Invoicing" },
+                { icon: Shield, label: "Secure & HIPAA" },
               ].map((feature, i) => (
                 <div
                   key={i}
@@ -145,7 +153,10 @@ export default function Login() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="role">Login as</Label>
-                <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
+                <Select
+                  value={role}
+                  onValueChange={(value) => setRole(value as UserRole)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
