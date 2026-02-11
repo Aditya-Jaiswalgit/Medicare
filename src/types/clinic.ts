@@ -1,14 +1,22 @@
-export type UserRole = 'super_admin' | 'clinic_admin' | 'doctor' | 'receptionist' | 'pharmacist' | 'lab_technician' | 'accountant' | 'patient';
+export type UserRole =
+  | "super_admin"
+  | "clinic_admin"
+  | "doctor"
+  | "receptionist"
+  | "pharmacist"
+  | "lab_technician"
+  | "accountant"
+  | "patient";
 
-export type UserStatus = 'Active' | 'Inactive';
-export type Gender = 'Male' | 'Female' | 'Other';
-export type AvailabilityStatus = 'Available' | 'Unavailable';
-export type AppointmentStatus = 'Scheduled' | 'Completed' | 'Cancelled';
-export type PaymentStatus = 'Paid' | 'Unpaid' | 'Partial';
-export type PaymentMode = 'Cash' | 'Card' | 'UPI' | 'Online';
-export type TransactionType = 'IN' | 'OUT';
-export type NotificationType = 'SMS' | 'Email' | 'App';
-export type BillItemType = 'Consultation' | 'Medicine' | 'LabTest';
+export type UserStatus = "Active" | "Inactive";
+export type Gender = "Male" | "Female" | "Other";
+export type AvailabilityStatus = "Available" | "Unavailable";
+export type AppointmentStatus = "Scheduled" | "Completed" | "Cancelled";
+export type PaymentStatus = "Paid" | "Unpaid" | "Partial";
+export type PaymentMode = "Cash" | "Card" | "UPI" | "Online";
+export type TransactionType = "IN" | "OUT";
+export type NotificationType = "SMS" | "Email" | "App";
+export type BillItemType = "Consultation" | "Medicine" | "LabTest";
 
 export interface User {
   user_id: string;

@@ -230,7 +230,6 @@ const doctorNav: NavConfig = [
 // Receptionist Dashboard Nav Config
 const receptionistNav: NavConfig = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-
   {
     label: "Patients",
     icon: Users,

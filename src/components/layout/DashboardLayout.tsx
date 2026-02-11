@@ -5,6 +5,7 @@ import { Sidebar } from "./Sidebar";
 import { Bell, Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GlobalSearch } from "./GlobalSearch";
+import NotificationDialog from "../dashboard/NotificationDialog";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -48,13 +49,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <Search className="w-5 h-5" />
               </Button>
 
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] rounded-full flex items-center justify-center">
-                  3
-                </span>
-              </Button>
-
+              <Button variant="ghost" size="icon" className="relative"></Button>
+              <NotificationDialog />
               <div
                 className="hidden sm:flex items-center gap-3 pl-3 border-l border-border cursor-pointer"
                 onClick={() => navigate("/profile")}

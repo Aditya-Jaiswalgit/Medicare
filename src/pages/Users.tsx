@@ -1,16 +1,16 @@
-import { useState } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { useState } from "react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -18,13 +18,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   Users,
   UserPlus,
@@ -43,13 +43,13 @@ import {
   DollarSign,
   UserCog,
   User,
-} from 'lucide-react';
-import { UserRole, UserStatus } from '@/types/clinic';
-import { cn } from '@/lib/utils';
-import { AddUserDialog } from '@/components/users/AddUserDialog';
-import { EditUserDialog, UserData } from '@/components/users/EditUserDialog';
-import { ChangeRoleDialog } from '@/components/users/ChangeRoleDialog';
-import { DeleteUserDialog } from '@/components/users/DeleteUserDialog';
+} from "lucide-react";
+import { UserRole, UserStatus } from "@/types/clinic";
+import { cn } from "@/lib/utils";
+import { AddUserDialog } from "@/components/users/AddUserDialog";
+import { EditUserDialog, UserData } from "@/components/users/EditUserDialog";
+import { ChangeRoleDialog } from "@/components/users/ChangeRoleDialog";
+import { DeleteUserDialog } from "@/components/users/DeleteUserDialog";
 
 interface MockUser {
   id: string;
@@ -64,187 +64,201 @@ interface MockUser {
 
 const mockUsers: MockUser[] = [
   {
-    id: '1',
-    full_name: 'John Administrator',
-    email: 'admin@medicare.com',
-    phone: '+1 234 567 8901',
-    role: 'super_admin',
-    status: 'Active',
-    created_at: '2024-01-15',
-    last_login: '2024-01-20 09:30',
+    id: "1",
+    full_name: "Eden Hazard",
+    email: "hazard@gmail.com",
+    phone: "900938746",
+    role: "patient",
+    status: "Active",
+    created_at: "2024-01-16",
+    last_login: "2024-01-20 10:15",
   },
   {
-    id: '2',
-    full_name: 'Sarah Mitchell',
-    email: 'sarah@medicare.com',
-    phone: '+1 234 567 8902',
-    role: 'clinic_admin',
-    status: 'Active',
-    created_at: '2024-01-16',
-    last_login: '2024-01-20 10:15',
+    id: "2",
+    full_name: "Sarah Mitchell",
+    email: "sarah@medicare.com",
+    phone: "+1 234 567 8902",
+    role: "clinic_admin",
+    status: "Active",
+    created_at: "2024-01-16",
+    last_login: "2024-01-20 10:15",
   },
   {
-    id: '3',
-    full_name: 'Dr. James Wilson',
-    email: 'dr.wilson@medicare.com',
-    phone: '+1 234 567 8903',
-    role: 'doctor',
-    status: 'Active',
-    created_at: '2024-01-17',
-    last_login: '2024-01-20 08:45',
+    id: "3",
+    full_name: "Dr. James Wilson",
+    email: "dr.wilson@medicare.com",
+    phone: "+1 234 567 8903",
+    role: "doctor",
+    status: "Active",
+    created_at: "2024-01-17",
+    last_login: "2024-01-20 08:45",
   },
   {
-    id: '4',
-    full_name: 'Dr. Emily Chen',
-    email: 'dr.chen@medicare.com',
-    phone: '+1 234 567 8904',
-    role: 'doctor',
-    status: 'Active',
-    created_at: '2024-01-17',
-    last_login: '2024-01-19 16:30',
+    id: "4",
+    full_name: "Dr. Emily Chen",
+    email: "dr.chen@medicare.com",
+    phone: "+1 234 567 8904",
+    role: "doctor",
+    status: "Active",
+    created_at: "2024-01-17",
+    last_login: "2024-01-19 16:30",
   },
   {
-    id: '5',
-    full_name: 'Maria Garcia',
-    email: 'maria@medicare.com',
-    phone: '+1 234 567 8905',
-    role: 'receptionist',
-    status: 'Active',
-    created_at: '2024-01-18',
-    last_login: '2024-01-20 07:00',
+    id: "5",
+    full_name: "Maria Garcia",
+    email: "maria@medicare.com",
+    phone: "+1 234 567 8905",
+    role: "receptionist",
+    status: "Active",
+    created_at: "2024-01-18",
+    last_login: "2024-01-20 07:00",
   },
   {
-    id: '6',
-    full_name: 'Robert Johnson',
-    email: 'robert@medicare.com',
-    phone: '+1 234 567 8906',
-    role: 'pharmacist',
-    status: 'Active',
-    created_at: '2024-01-18',
-    last_login: '2024-01-20 08:00',
+    id: "6",
+    full_name: "Robert Johnson",
+    email: "robert@medicare.com",
+    phone: "+1 234 567 8906",
+    role: "pharmacist",
+    status: "Active",
+    created_at: "2024-01-18",
+    last_login: "2024-01-20 08:00",
   },
   {
-    id: '7',
-    full_name: 'Lisa Thompson',
-    email: 'lisa@medicare.com',
-    phone: '+1 234 567 8907',
-    role: 'lab_technician',
-    status: 'Active',
-    created_at: '2024-01-19',
-    last_login: '2024-01-20 09:00',
+    id: "7",
+    full_name: "Lisa Thompson",
+    email: "lisa@medicare.com",
+    phone: "+1 234 567 8907",
+    role: "lab_technician",
+    status: "Active",
+    created_at: "2024-01-19",
+    last_login: "2024-01-20 09:00",
   },
   {
-    id: '8',
-    full_name: 'Michael Brown',
-    email: 'michael@medicare.com',
-    phone: '+1 234 567 8908',
-    role: 'accountant',
-    status: 'Active',
-    created_at: '2024-01-19',
-    last_login: '2024-01-20 08:30',
+    id: "8",
+    full_name: "Michael Brown",
+    email: "michael@medicare.com",
+    phone: "+1 234 567 8908",
+    role: "accountant",
+    status: "Active",
+    created_at: "2024-01-19",
+    last_login: "2024-01-20 08:30",
   },
   {
-    id: '9',
-    full_name: 'Jennifer Davis',
-    email: 'jennifer@example.com',
-    phone: '+1 234 567 8909',
-    role: 'patient',
-    status: 'Active',
-    created_at: '2024-01-20',
-    last_login: '2024-01-20 11:00',
+    id: "9",
+    full_name: "Jennifer Davis",
+    email: "jennifer@example.com",
+    phone: "+1 234 567 8909",
+    role: "patient",
+    status: "Active",
+    created_at: "2024-01-20",
+    last_login: "2024-01-20 11:00",
   },
   {
-    id: '10',
-    full_name: 'David Martinez',
-    email: 'david@example.com',
-    phone: '+1 234 567 8910',
-    role: 'patient',
-    status: 'Inactive',
-    created_at: '2024-01-20',
+    id: "10",
+    full_name: "David Martinez",
+    email: "david@example.com",
+    phone: "+1 234 567 8910",
+    role: "patient",
+    status: "Inactive",
+    created_at: "2024-01-20",
   },
 ];
 
-const roleConfig: Record<UserRole, { label: string; icon: React.ElementType; color: string; description: string }> = {
-  super_admin: {
-    label: 'Super Admin',
-    icon: Shield,
-    color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-    description: 'Tenants, Licensing, Plans',
-  },
+const roleConfig: Record<
+  UserRole,
+  { label: string; icon: React.ElementType; color: string; description: string }
+> = {
   clinic_admin: {
-    label: 'Clinic Admin',
+    label: "Clinic Admin",
     icon: Building2,
-    color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    description: 'Clinic Settings, Users, Reports',
+    color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    description: "Clinic Settings, Users, Reports",
   },
   doctor: {
-    label: 'Doctor',
+    label: "Doctor",
     icon: Stethoscope,
-    color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-    description: 'EMR, Prescriptions',
+    color:
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+    description: "EMR, Prescriptions",
   },
   receptionist: {
-    label: 'Receptionist',
+    label: "Receptionist",
     icon: Calendar,
-    color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    description: 'Appointments, Registration',
+    color:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    description: "Appointments, Registration",
   },
   pharmacist: {
-    label: 'Pharmacist',
+    label: "Pharmacist",
     icon: Pill,
-    color: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
-    description: 'Medicines, Billing',
+    color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
+    description: "Medicines, Billing",
   },
   lab_technician: {
-    label: 'Lab Technician',
+    label: "Lab Technician",
     icon: TestTube,
-    color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
-    description: 'Tests & Results',
+    color: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400",
+    description: "Tests & Results",
   },
   accountant: {
-    label: 'Accountant',
+    label: "Accountant",
     icon: DollarSign,
-    color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    description: 'Payments, GST, Reports',
+    color:
+      "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+    description: "Payments, GST, Reports",
   },
   patient: {
-    label: 'Patient',
+    label: "Patient",
     icon: User,
-    color: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400',
-    description: 'Appointments, Records',
+    color:
+      "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400",
+    description: "Appointments, Records",
   },
 };
 
 export default function UsersPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRole, setSelectedRole] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRole, setSelectedRole] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [editUser, setEditUser] = useState<UserData | null>(null);
-  const [changeRoleUser, setChangeRoleUser] = useState<{ id: string; full_name: string; role: UserRole } | null>(null);
-  const [deleteUser, setDeleteUser] = useState<{ id: string; full_name: string; email: string } | null>(null);
+  const [changeRoleUser, setChangeRoleUser] = useState<{
+    id: string;
+    full_name: string;
+    role: UserRole;
+  } | null>(null);
+  const [deleteUser, setDeleteUser] = useState<{
+    id: string;
+    full_name: string;
+    email: string;
+  } | null>(null);
 
   const filteredUsers = mockUsers.filter((user) => {
     const matchesSearch =
       user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = selectedRole === 'all' || user.role === selectedRole;
-    const matchesStatus = selectedStatus === 'all' || user.status === selectedStatus;
+    const matchesRole = selectedRole === "all" || user.role === selectedRole;
+    const matchesStatus =
+      selectedStatus === "all" || user.status === selectedStatus;
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const userCountByRole = mockUsers.reduce((acc, user) => {
-    acc[user.role] = (acc[user.role] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const userCountByRole = mockUsers.reduce(
+    (acc, user) => {
+      acc[user.role] = (acc[user.role] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">User Management</h1>
+            <h1 className="text-2xl font-bold text-foreground">
+              User Management
+            </h1>
             <p className="text-muted-foreground">
               Manage all users and their roles in the system
             </p>
@@ -264,22 +278,26 @@ export default function UsersPage() {
               <Card
                 key={role}
                 className={cn(
-                  'cursor-pointer transition-all hover:shadow-md',
-                  selectedRole === role && 'ring-2 ring-primary'
+                  "cursor-pointer transition-all hover:shadow-md",
+                  selectedRole === role && "ring-2 ring-primary",
                 )}
-                onClick={() => setSelectedRole(selectedRole === role ? 'all' : role)}
+                onClick={() =>
+                  setSelectedRole(selectedRole === role ? "all" : role)
+                }
               >
                 <CardContent className="p-3 text-center">
                   <div
                     className={cn(
-                      'w-10 h-10 rounded-lg mx-auto mb-2 flex items-center justify-center',
-                      config.color
+                      "w-10 h-10 rounded-lg mx-auto mb-2 flex items-center justify-center",
+                      config.color,
                     )}
                   >
                     <Icon className="w-5 h-5" />
                   </div>
                   <p className="text-2xl font-bold text-foreground">{count}</p>
-                  <p className="text-xs text-muted-foreground truncate">{config.label}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {config.label}
+                  </p>
                 </CardContent>
               </Card>
             );
@@ -341,8 +359,12 @@ export default function UsersPage() {
                   <TableRow className="bg-muted/50">
                     <TableHead>User</TableHead>
                     <TableHead>Role</TableHead>
-                    <TableHead className="hidden md:table-cell">Contact</TableHead>
-                    <TableHead className="hidden lg:table-cell">Created</TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      Contact
+                    </TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                      Created
+                    </TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
@@ -361,8 +383,12 @@ export default function UsersPage() {
                               </span>
                             </div>
                             <div>
-                              <p className="font-medium text-foreground">{user.full_name}</p>
-                              <p className="text-sm text-muted-foreground">{user.email}</p>
+                              <p className="font-medium text-foreground">
+                                {user.full_name}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {user.email}
+                              </p>
                             </div>
                           </div>
                         </TableCell>
@@ -370,14 +396,16 @@ export default function UsersPage() {
                           <div className="flex items-center gap-2">
                             <div
                               className={cn(
-                                'w-8 h-8 rounded-lg flex items-center justify-center',
-                                roleInfo.color
+                                "w-8 h-8 rounded-lg flex items-center justify-center",
+                                roleInfo.color,
                               )}
                             >
                               <RoleIcon className="w-4 h-4" />
                             </div>
                             <div>
-                              <p className="text-sm font-medium">{roleInfo.label}</p>
+                              <p className="text-sm font-medium">
+                                {roleInfo.label}
+                              </p>
                               <p className="text-xs text-muted-foreground hidden xl:block">
                                 {roleInfo.description}
                               </p>
@@ -388,7 +416,9 @@ export default function UsersPage() {
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                               <Mail className="w-3.5 h-3.5" />
-                              <span className="truncate max-w-32">{user.email}</span>
+                              <span className="truncate max-w-32">
+                                {user.email}
+                              </span>
                             </div>
                             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                               <Phone className="w-3.5 h-3.5" />
@@ -408,11 +438,13 @@ export default function UsersPage() {
                         </TableCell>
                         <TableCell>
                           <Badge
-                            variant={user.status === 'Active' ? 'default' : 'secondary'}
+                            variant={
+                              user.status === "Active" ? "default" : "secondary"
+                            }
                             className={cn(
-                              user.status === 'Active'
-                                ? 'bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400'
+                              user.status === "Active"
+                                ? "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400"
+                                : "bg-gray-100 text-gray-600 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400",
                             )}
                           >
                             {user.status}
@@ -421,43 +453,53 @@ export default function UsersPage() {
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                              >
                                 <MoreVertical className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
                                 className="gap-2"
-                                onClick={() => setEditUser({
-                                  id: user.id,
-                                  full_name: user.full_name,
-                                  email: user.email,
-                                  phone: user.phone,
-                                  role: user.role,
-                                  status: user.status,
-                                })}
+                                onClick={() =>
+                                  setEditUser({
+                                    id: user.id,
+                                    full_name: user.full_name,
+                                    email: user.email,
+                                    phone: user.phone,
+                                    role: user.role,
+                                    status: user.status,
+                                  })
+                                }
                               >
                                 <Edit className="w-4 h-4" />
                                 Edit User
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="gap-2"
-                                onClick={() => setChangeRoleUser({
-                                  id: user.id,
-                                  full_name: user.full_name,
-                                  role: user.role,
-                                })}
+                                onClick={() =>
+                                  setChangeRoleUser({
+                                    id: user.id,
+                                    full_name: user.full_name,
+                                    role: user.role,
+                                  })
+                                }
                               >
                                 <UserCog className="w-4 h-4" />
                                 Change Role
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="gap-2 text-destructive"
-                                onClick={() => setDeleteUser({
-                                  id: user.id,
-                                  full_name: user.full_name,
-                                  email: user.email,
-                                })}
+                                onClick={() =>
+                                  setDeleteUser({
+                                    id: user.id,
+                                    full_name: user.full_name,
+                                    email: user.email,
+                                  })
+                                }
                               >
                                 <Trash2 className="w-4 h-4" />
                                 Delete User
@@ -475,7 +517,9 @@ export default function UsersPage() {
             {filteredUsers.length === 0 && (
               <div className="text-center py-12">
                 <Users className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-                <p className="text-muted-foreground">No users found matching your criteria</p>
+                <p className="text-muted-foreground">
+                  No users found matching your criteria
+                </p>
               </div>
             )}
           </CardContent>
