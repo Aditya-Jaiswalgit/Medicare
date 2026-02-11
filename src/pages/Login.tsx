@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 
 const roles: { value: UserRole; label: string; icon: React.ElementType }[] = [
+  { value: "super_admin", label: "Super Admin", icon: UserCog },
   { value: "clinic_admin", label: "Clinic Admin", icon: UserCog },
   { value: "doctor", label: "Doctor", icon: Stethoscope },
   { value: "receptionist", label: "Receptionist", icon: Users },
@@ -41,7 +42,7 @@ export default function Login() {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("doctor");
+  const [role, setRole] = useState<UserRole>("patient");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -58,7 +59,8 @@ export default function Login() {
 
     try {
       await login(email, password, role);
-      navigate("/dashboard");
+      if (role === "clinic_admin") navigate("/users");
+      else navigate("/dashboard");
     } catch (err) {
       setError("Invalid credentials");
     } finally {

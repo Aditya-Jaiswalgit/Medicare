@@ -1,10 +1,10 @@
-import { ReactNode, useState } from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Sidebar } from './Sidebar';
-import { Bell, Menu, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { GlobalSearch } from './GlobalSearch';
+import { ReactNode, useState } from "react";
+import { Navigate, Route, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Sidebar } from "./Sidebar";
+import { Bell, Menu, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { GlobalSearch } from "./GlobalSearch";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -13,6 +13,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { isAuthenticated, user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -21,7 +22,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      
+
       <div className="lg:ml-64 min-h-screen flex flex-col">
         {/* Top Header */}
         <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border">
@@ -40,7 +41,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="hidden sm:flex items-center gap-4 flex-1 ml-4 lg:ml-0">
               <GlobalSearch />
             </div>
-            
+
             <div className="flex items-center gap-2 lg:gap-3">
               {/* Mobile Search Button */}
               <Button variant="ghost" size="icon" className="sm:hidden">
@@ -53,8 +54,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   3
                 </span>
               </Button>
-              
-              <div className="hidden sm:flex items-center gap-3 pl-3 border-l border-border">
+
+              <div
+                className="hidden sm:flex items-center gap-3 pl-3 border-l border-border cursor-pointer"
+                onClick={() => navigate("/profile")}
+              >
                 <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center">
                   <span className="text-sm font-medium text-primary-foreground">
                     {user?.full_name.charAt(0)}
@@ -66,9 +70,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 p-4 lg:p-6">
-          {children}
-        </main>
+        <main className="flex-1 p-4 lg:p-6">{children}</main>
       </div>
     </div>
   );

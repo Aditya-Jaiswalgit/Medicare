@@ -120,10 +120,7 @@ function isNavGroup(item: NavItem | NavGroup): item is NavGroup {
 }
 
 const clinicAdminNav: NavConfig = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-
-  { label: "Patients", href: "/patients", icon: Users },
-
+  { label: "Users", href: "/users", icon: Users },
   {
     label: "Appointments",
     icon: Calendar,
@@ -170,22 +167,11 @@ const clinicAdminNav: NavConfig = [
 
   { label: "Lab Tests", href: "/lab/tests", icon: TestTube },
 
-  { label: "Users", href: "/users", icon: Users },
-
   { label: "Role Permissions", href: "/role-permissions", icon: Shield },
 
   { label: "Reports", href: "/reports", icon: BarChart3 },
 
   { label: "Clinic Profile", href: "/clinic/profile", icon: Building2 },
-
-  {
-    label: "Profile",
-    icon: User,
-    items: [
-      { label: "My Profile", href: "/profile", icon: User },
-      { label: "Change Password", href: "/profile/password", icon: KeyRound },
-    ],
-  },
 ];
 
 // Import Award icon (was missing)
@@ -238,16 +224,6 @@ const doctorNav: NavConfig = [
     label: "Reports",
     icon: BarChart3,
     items: [{ label: "Reports Overview", href: "/reports", icon: BarChart3 }],
-  },
-
-  // Profile
-  {
-    label: "My Profile",
-    icon: User,
-    items: [
-      { label: "View Profile", href: "/profile", icon: User },
-      { label: "Change Password", href: "/profile/password", icon: KeyRound },
-    ],
   },
 ];
 
@@ -313,15 +289,6 @@ const receptionistNav: NavConfig = [
   },
 
   { label: "Daily Reports", href: "/reports/daily", icon: BarChart3 },
-
-  {
-    label: "Profile",
-    icon: User,
-    items: [
-      { label: "My Profile", href: "/profile", icon: User },
-      { label: "Change Password", href: "/profile/password", icon: KeyRound },
-    ],
-  },
 ];
 
 // Import Ticket icon
