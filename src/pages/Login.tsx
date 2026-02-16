@@ -1,17 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { UserRole } from "@/types/clinic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Stethoscope,
   Mail,
@@ -26,23 +18,11 @@ import {
   User,
 } from "lucide-react";
 
-const roles: { value: UserRole; label: string; icon: React.ElementType }[] = [
-  { value: "super_admin", label: "Super Admin", icon: UserCog },
-  { value: "clinic_admin", label: "Clinic Admin", icon: UserCog },
-  { value: "doctor", label: "Doctor", icon: Stethoscope },
-  { value: "receptionist", label: "Receptionist", icon: Users },
-  { value: "pharmacist", label: "Pharmacist", icon: Pill },
-  { value: "lab_technician", label: "Lab Technician", icon: TestTube },
-  { value: "accountant", label: "Accountant", icon: DollarSign },
-  { value: "patient", label: "Patient", icon: User },
-];
-
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("patient");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -58,11 +38,18 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await login(email, password, role);
-      if (role === "clinic_admin") navigate("/users");
-      else navigate("/dashboard");
+      await login(email, password);
+
+      // Optional: redirect based on role from backend
+      const role = user?.role;
+
+      if (role === "clinic_admin") {
+        navigate("/users");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err) {
-      setError("Invalid credentials");
+      setError(err instanceof Error ? err.message : "Invalid credentials");
     } finally {
       setIsLoading(false);
     }
@@ -86,7 +73,7 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="space-y-8 animate-fade-in">
+          <div className="space-y-8">
             <div>
               <h2 className="text-4xl font-bold text-white leading-tight">
                 Streamline Your
@@ -109,7 +96,6 @@ export default function Login() {
                 <div
                   key={i}
                   className="flex items-center gap-3 p-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10"
-                  style={{ animationDelay: `${i * 100}ms` }}
                 >
                   <feature.icon className="w-5 h-5 text-primary" />
                   <span className="text-sm text-white/80">{feature.label}</span>
@@ -126,18 +112,7 @@ export default function Login() {
 
       {/* Right Panel - Login Form */}
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
-        <div className="w-full max-w-md space-y-8 animate-slide-up">
-          {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
-              <Stethoscope className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">MediCare</h1>
-              <p className="text-sm text-muted-foreground">Clinic Management</p>
-            </div>
-          </div>
-
+        <div className="w-full max-w-md space-y-8">
           <div className="text-center lg:text-left">
             <h2 className="text-3xl font-bold text-foreground">Welcome back</h2>
             <p className="text-muted-foreground mt-2">
@@ -154,28 +129,6 @@ export default function Login() {
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="role">Login as</Label>
-                <Select
-                  value={role}
-                  onValueChange={(value) => setRole(value as UserRole)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roles.map((r) => (
-                      <SelectItem key={r.value} value={r.value}>
-                        <div className="flex items-center gap-2">
-                          <r.icon className="w-4 h-4" />
-                          <span>{r.label}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -191,12 +144,7 @@ export default function Login() {
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <a href="#" className="text-sm text-primary hover:underline">
-                    Forgot password?
-                  </a>
-                </div>
+                <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -220,8 +168,7 @@ export default function Login() {
             >
               {isLoading ? (
                 <span className="flex items-center gap-2">
-                  <span className="animate-spin">⏳</span>
-                  Signing in...
+                  ⏳ Signing in...
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
@@ -230,10 +177,6 @@ export default function Login() {
                 </span>
               )}
             </Button>
-
-            <p className="text-center text-sm text-muted-foreground">
-              Demo: Select any role and click Sign In
-            </p>
           </form>
         </div>
       </div>
