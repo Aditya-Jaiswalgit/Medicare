@@ -89,12 +89,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    setRole(null);
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("role");
+  const logout = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await fetch("http://localhost:5000/api/auth/logout", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        console.error("Logout failed:", data.message);
+        // Still proceed with local logout
+      }
+    } catch (error) {
+      console.error("Logout API error:", error);
+      // Still proceed with local logout
+    } finally {
+      // Always clear local state
+      setUser(null);
+      setRole(null);
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("role");
+
+      // Redirect to login page
+      window.location.href = "/login";
+    }
   };
 
   return (

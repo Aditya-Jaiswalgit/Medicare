@@ -35,6 +35,8 @@ import TodaysAppointments from "./pages/receptionist/TodaysAppointments";
 import AllAppointments from "./pages/receptionist/AllAppointments";
 
 import { useLocation } from "react-router-dom";
+import CreateClinic from "./components/users/CreateClinic";
+import Clinics from "./pages/Clinics";
 
 const queryClient = new QueryClient();
 
@@ -380,6 +382,22 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <LabTests />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/create/Clinic"
+        element={
+          <ProtectedRoute>
+            <CreateClinic />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/clinics"
+        element={
+          <ProtectedRoute>
+            <Clinics />
           </ProtectedRoute>
         }
       />

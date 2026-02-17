@@ -5,6 +5,7 @@ import { UserRole } from "@/types/clinic";
 import {
   LayoutDashboard,
   Users,
+  Hospital,
   UserCog,
   Calendar,
   Stethoscope,
@@ -183,7 +184,7 @@ const doctorNav: NavConfig = [
   {
     label: "Dashboard",
     icon: LayoutDashboard,
-    items: [{ label: "Overview", href: "/dashboard", icon: LayoutDashboard }],
+    href: "/dashboard",
   },
 
   // Appointments
@@ -299,6 +300,8 @@ const simpleNavItems: Record<
 > = {
   super_admin: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { label: "Create Clinic", href: "/create/clinic", icon: Hospital },
+    { label: "Clinic Management", href: "/Clinics", icon: Settings },
     { label: "Users", href: "/users", icon: Users },
     { label: "Role Permissions", href: "/role-permissions", icon: UserCog },
     { label: "Reports", href: "/reports", icon: BarChart3 },
