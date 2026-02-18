@@ -23,7 +23,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Restore auth state from localStorage on mount
   useEffect(() => {
     const restoreAuth = () => {
       try {
@@ -65,19 +64,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const responseData = await response.json();
-
-      // Handle nested response structure: response.data contains { token, user }
       const { token, user } = responseData.data;
 
       if (!user || !user.role) {
         throw new Error("Invalid response from server");
       }
-
-      // Set user and role from API response
       setUser(user);
       setRole(user.role as UserRole);
-
-      // Store JWT token and user data for persistence
       if (token) {
         localStorage.setItem("token", token);
         localStorage.setItem("user", JSON.stringify(user));
@@ -103,20 +96,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!response.ok) {
         const data = await response.json();
         console.error("Logout failed:", data.message);
-        // Still proceed with local logout
       }
     } catch (error) {
       console.error("Logout API error:", error);
-      // Still proceed with local logout
     } finally {
-      // Always clear local state
       setUser(null);
       setRole(null);
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       localStorage.removeItem("role");
-
-      // Redirect to login page
       window.location.href = "/login";
     }
   };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,7 @@ import {
   DollarSign,
   UserCog,
   User,
+  Loader2,
 } from "lucide-react";
 import { UserRole, UserStatus } from "@/types/clinic";
 import { cn } from "@/lib/utils";
@@ -50,130 +51,47 @@ import { AddUserDialog } from "@/components/users/AddUserDialog";
 import { EditUserDialog, UserData } from "@/components/users/EditUserDialog";
 import { ChangeRoleDialog } from "@/components/users/ChangeRoleDialog";
 import { DeleteUserDialog } from "@/components/users/DeleteUserDialog";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
-interface MockUser {
+interface ApiUser {
   id: string;
-  full_name: string;
   email: string;
-  phone: string;
   role: UserRole;
-  status: UserStatus;
+  full_name: string;
+  phone: string;
+  address: string | null;
+  department: string | null;
+  specialization: string | null;
+  is_active: boolean;
   created_at: string;
-  last_login?: string;
 }
 
-const mockUsers: MockUser[] = [
-  {
-    id: "1",
-    full_name: "Eden Hazard",
-    email: "hazard@gmail.com",
-    phone: "900938746",
-    role: "patient",
-    status: "Active",
-    created_at: "2024-01-16",
-    last_login: "2024-01-20 10:15",
-  },
-  {
-    id: "2",
-    full_name: "Sarah Mitchell",
-    email: "sarah@medicare.com",
-    phone: "+1 234 567 8902",
-    role: "clinic_admin",
-    status: "Active",
-    created_at: "2024-01-16",
-    last_login: "2024-01-20 10:15",
-  },
-  {
-    id: "3",
-    full_name: "Dr. James Wilson",
-    email: "dr.wilson@medicare.com",
-    phone: "+1 234 567 8903",
-    role: "doctor",
-    status: "Active",
-    created_at: "2024-01-17",
-    last_login: "2024-01-20 08:45",
-  },
-  {
-    id: "4",
-    full_name: "Dr. Emily Chen",
-    email: "dr.chen@medicare.com",
-    phone: "+1 234 567 8904",
-    role: "doctor",
-    status: "Active",
-    created_at: "2024-01-17",
-    last_login: "2024-01-19 16:30",
-  },
-  {
-    id: "5",
-    full_name: "Maria Garcia",
-    email: "maria@medicare.com",
-    phone: "+1 234 567 8905",
-    role: "receptionist",
-    status: "Active",
-    created_at: "2024-01-18",
-    last_login: "2024-01-20 07:00",
-  },
-  {
-    id: "6",
-    full_name: "Robert Johnson",
-    email: "robert@medicare.com",
-    phone: "+1 234 567 8906",
-    role: "pharmacist",
-    status: "Active",
-    created_at: "2024-01-18",
-    last_login: "2024-01-20 08:00",
-  },
-  {
-    id: "7",
-    full_name: "Lisa Thompson",
-    email: "lisa@medicare.com",
-    phone: "+1 234 567 8907",
-    role: "lab_technician",
-    status: "Active",
-    created_at: "2024-01-19",
-    last_login: "2024-01-20 09:00",
-  },
-  {
-    id: "8",
-    full_name: "Michael Brown",
-    email: "michael@medicare.com",
-    phone: "+1 234 567 8908",
-    role: "accountant",
-    status: "Active",
-    created_at: "2024-01-19",
-    last_login: "2024-01-20 08:30",
-  },
-  {
-    id: "9",
-    full_name: "Jennifer Davis",
-    email: "jennifer@example.com",
-    phone: "+1 234 567 8909",
-    role: "patient",
-    status: "Active",
-    created_at: "2024-01-20",
-    last_login: "2024-01-20 11:00",
-  },
-  {
-    id: "10",
-    full_name: "David Martinez",
-    email: "david@example.com",
-    phone: "+1 234 567 8910",
-    role: "patient",
-    status: "Inactive",
-    created_at: "2024-01-20",
-  },
+interface ApiResponse {
+  success: boolean;
+  data: ApiUser[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
+}
+
+const rolesToFetch = [
+  "patient",
+  "doctor",
+  "lab-technician", // ← hyphen
+  "pharmacist",
+  "accountant",
+  "receptionist",
+  "clinic-admin", // ← underscore
 ];
 
 const roleConfig: Record<
   UserRole,
   { label: string; icon: React.ElementType; color: string; description: string }
 > = {
-  clinic_admin: {
-    label: "Clinic Admin",
-    icon: Building2,
-    color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-    description: "Clinic Settings, Users, Reports",
-  },
   doctor: {
     label: "Doctor",
     icon: Stethoscope,
@@ -216,7 +134,20 @@ const roleConfig: Record<
   },
 };
 
+// Transform API user to match the expected format
+const transformApiUser = (apiUser: ApiUser) => ({
+  id: apiUser.id,
+  full_name: apiUser.full_name,
+  email: apiUser.email,
+  phone: apiUser.phone,
+  role: apiUser.role,
+  status: apiUser.is_active ? "Active" : ("Inactive" as UserStatus),
+  created_at: new Date(apiUser.created_at).toLocaleDateString(),
+  last_login: undefined,
+});
+
 export default function UsersPage() {
+  const token = localStorage.getItem("token");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRole, setSelectedRole] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -233,17 +164,105 @@ export default function UsersPage() {
     email: string;
   } | null>(null);
 
-  const filteredUsers = mockUsers.filter((user) => {
+  // API state
+  const [users, setUsers] = useState<ApiUser[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    pages: 1,
+  });
+
+  // Fetch users by role
+  const fetchUsersByRole = async (role?: string) => {
+    setLoading(true);
+    try {
+      if (!role || role === "all") {
+        const rolesToFetch = [
+          "patient",
+          "doctor",
+          "lab_technician",
+          "pharmacist",
+          "accountant",
+          "receptionist",
+        ];
+
+        const promises = rolesToFetch.map(async (r) => {
+          const response = await fetch(
+            `http://localhost:5000/api/clinic-admin/users/${r}`, // ← Fixed!
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            },
+          );
+
+          if (!response.ok) {
+            console.error(`Failed to fetch ${r}:`, response.status);
+            return [];
+          }
+
+          const data: ApiResponse = await response.json();
+          return data.data;
+        });
+
+        const results = await Promise.all(promises);
+        const allUsers = results.flat();
+        setUsers(allUsers);
+
+        setPagination({
+          total: allUsers.length,
+          page: 1,
+          limit: allUsers.length,
+          pages: 1,
+        });
+      } else {
+        const response = await fetch(
+          `http://localhost:5000/api/clinic-admin/users/${role}`, // ← Fixed!
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          },
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("API Error:", response.status, errorText);
+          throw new Error(`Failed to fetch users: ${response.status}`);
+        }
+
+        const data: ApiResponse = await response.json();
+        setUsers(data.data);
+        setPagination(data.pagination);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast.error("Failed to load users");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch and fetch when role changes
+  useEffect(() => {
+    fetchUsersByRole(selectedRole !== "all" ? selectedRole : undefined);
+  }, [selectedRole]);
+
+  // Filter users based on search and status
+  const filteredUsers = users.map(transformApiUser).filter((user) => {
     const matchesSearch =
       user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = selectedRole === "all" || user.role === selectedRole;
     const matchesStatus =
       selectedStatus === "all" || user.status === selectedStatus;
-    return matchesSearch && matchesRole && matchesStatus;
+    return matchesSearch && matchesStatus;
   });
 
-  const userCountByRole = mockUsers.reduce(
+  const userCountByRole = users.reduce(
     (acc, user) => {
       acc[user.role] = (acc[user.role] || 0) + 1;
       return acc;
@@ -349,191 +368,212 @@ export default function UsersPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <Users className="w-5 h-5" />
-              All Users ({filteredUsers.length})
+              All Users ({filteredUsers.length} of {pagination.total})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>User</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead className="hidden md:table-cell">
-                      Contact
-                    </TableHead>
-                    <TableHead className="hidden lg:table-cell">
-                      Created
-                    </TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-12"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => {
-                    const roleInfo = roleConfig[user.role];
-                    const RoleIcon = roleInfo.icon;
-                    return (
-                      <TableRow key={user.id} className="hover:bg-muted/50">
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                              <span className="text-sm font-semibold text-primary">
-                                {user.full_name.charAt(0)}
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-medium text-foreground">
-                                {user.full_name}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {user.email}
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={cn(
-                                "w-8 h-8 rounded-lg flex items-center justify-center",
-                                roleInfo.color,
-                              )}
-                            >
-                              <RoleIcon className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">
-                                {roleInfo.label}
-                              </p>
-                              <p className="text-xs text-muted-foreground hidden xl:block">
-                                {roleInfo.description}
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                              <Mail className="w-3.5 h-3.5" />
-                              <span className="truncate max-w-32">
-                                {user.email}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                              <Phone className="w-3.5 h-3.5" />
-                              {user.phone}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          <div className="text-sm">
-                            <p className="text-foreground">{user.created_at}</p>
-                            {user.last_login && (
-                              <p className="text-xs text-muted-foreground">
-                                Last: {user.last_login}
-                              </p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              user.status === "Active" ? "default" : "secondary"
-                            }
-                            className={cn(
-                              user.status === "Active"
-                                ? "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400"
-                                : "bg-gray-100 text-gray-600 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400",
-                            )}
-                          >
-                            {user.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                              >
-                                <MoreVertical className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                className="gap-2"
-                                onClick={() =>
-                                  setEditUser({
-                                    id: user.id,
-                                    full_name: user.full_name,
-                                    email: user.email,
-                                    phone: user.phone,
-                                    role: user.role,
-                                    status: user.status,
-                                  })
-                                }
-                              >
-                                <Edit className="w-4 h-4" />
-                                Edit User
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="gap-2"
-                                onClick={() =>
-                                  setChangeRoleUser({
-                                    id: user.id,
-                                    full_name: user.full_name,
-                                    role: user.role,
-                                  })
-                                }
-                              >
-                                <UserCog className="w-4 h-4" />
-                                Change Role
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="gap-2 text-destructive"
-                                onClick={() =>
-                                  setDeleteUser({
-                                    id: user.id,
-                                    full_name: user.full_name,
-                                    email: user.email,
-                                  })
-                                }
-                              >
-                                <Trash2 className="w-4 h-4" />
-                                Delete User
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-
-            {filteredUsers.length === 0 && (
-              <div className="text-center py-12">
-                <Users className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  No users found matching your criteria
-                </p>
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
               </div>
+            ) : (
+              <>
+                <div className="rounded-lg border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead>User</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Contact
+                        </TableHead>
+                        <TableHead className="hidden lg:table-cell">
+                          Created
+                        </TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="w-12"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredUsers.map((user) => {
+                        const roleInfo = roleConfig[user.role];
+                        const RoleIcon = roleInfo.icon;
+                        return (
+                          <TableRow key={user.id} className="hover:bg-muted/50">
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <span className="text-sm font-semibold text-primary">
+                                    {user.full_name.charAt(0)}
+                                  </span>
+                                </div>
+                                <div>
+                                  <p className="font-medium text-foreground">
+                                    {user.full_name}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {user.email}
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className={cn(
+                                    "w-8 h-8 rounded-lg flex items-center justify-center",
+                                    roleInfo.color,
+                                  )}
+                                >
+                                  <RoleIcon className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    {roleInfo.label}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground hidden xl:block">
+                                    {roleInfo.description}
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                  <Mail className="w-3.5 h-3.5" />
+                                  <span className="truncate max-w-32">
+                                    {user.email}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                  <Phone className="w-3.5 h-3.5" />
+                                  {user.phone}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell">
+                              <div className="text-sm">
+                                <p className="text-foreground">
+                                  {user.created_at}
+                                </p>
+                                {user.last_login && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Last: {user.last_login}
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  user.status === "Active"
+                                    ? "default"
+                                    : "secondary"
+                                }
+                                className={cn(
+                                  user.status === "Active"
+                                    ? "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400"
+                                    : "bg-gray-100 text-gray-600 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400",
+                                )}
+                              >
+                                {user.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                  >
+                                    <MoreVertical className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    className="gap-2"
+                                    onClick={() =>
+                                      setEditUser({
+                                        id: user.id,
+                                        full_name: user.full_name,
+                                        email: user.email,
+                                        phone: user.phone,
+                                        role: user.role,
+                                        status: user.status,
+                                      })
+                                    }
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                    Edit User
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="gap-2"
+                                    onClick={() =>
+                                      setChangeRoleUser({
+                                        id: user.id,
+                                        full_name: user.full_name,
+                                        role: user.role,
+                                      })
+                                    }
+                                  >
+                                    <UserCog className="w-4 h-4" />
+                                    Change Role
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="gap-2 text-destructive"
+                                    onClick={() =>
+                                      setDeleteUser({
+                                        id: user.id,
+                                        full_name: user.full_name,
+                                        email: user.email,
+                                      })
+                                    }
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete User
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {filteredUsers.length === 0 && (
+                  <div className="text-center py-12">
+                    <Users className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+                    <p className="text-muted-foreground">
+                      No users found matching your criteria
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
       </div>
 
       {/* Add User Dialog */}
-      <AddUserDialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen} />
+      <AddUserDialog
+        open={isAddUserOpen}
+        onOpenChange={setIsAddUserOpen}
+        onSuccess={() =>
+          fetchUsersByRole(selectedRole !== "all" ? selectedRole : undefined)
+        }
+      />
 
       {/* Edit User Dialog */}
       <EditUserDialog
         open={!!editUser}
         onOpenChange={(open) => !open && setEditUser(null)}
         user={editUser}
+        onSuccess={() =>
+          fetchUsersByRole(selectedRole !== "all" ? selectedRole : undefined)
+        }
       />
 
       {/* Change Role Dialog */}
@@ -541,6 +581,9 @@ export default function UsersPage() {
         open={!!changeRoleUser}
         onOpenChange={(open) => !open && setChangeRoleUser(null)}
         user={changeRoleUser}
+        onSuccess={() =>
+          fetchUsersByRole(selectedRole !== "all" ? selectedRole : undefined)
+        }
       />
 
       {/* Delete User Dialog */}
@@ -548,6 +591,9 @@ export default function UsersPage() {
         open={!!deleteUser}
         onOpenChange={(open) => !open && setDeleteUser(null)}
         user={deleteUser}
+        onSuccess={() =>
+          fetchUsersByRole(selectedRole !== "all" ? selectedRole : undefined)
+        }
       />
     </DashboardLayout>
   );

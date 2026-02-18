@@ -2,9 +2,8 @@ import { ReactNode, useState } from "react";
 import { Navigate, Route, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sidebar } from "./Sidebar";
-import { Bell, Menu, Search } from "lucide-react";
+import { Bell, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GlobalSearch } from "./GlobalSearch";
 import NotificationDialog from "../dashboard/NotificationDialog";
 
 interface DashboardLayoutProps {
@@ -38,26 +37,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <Menu className="w-5 h-5" />
             </Button>
 
-            {/* Global Search - Hidden on mobile, shown on tablet+ */}
-            <div className="hidden sm:flex items-center gap-4 flex-1 ml-4 lg:ml-0">
-              <GlobalSearch />
-            </div>
+            {/* Empty div for spacing on mobile */}
+            <div className="lg:hidden" />
 
-            <div className="flex items-center gap-2 lg:gap-3">
-              {/* Mobile Search Button */}
-              <Button variant="ghost" size="icon" className="sm:hidden">
-                <Search className="w-5 h-5" />
-              </Button>
-
-              <Button variant="ghost" size="icon" className="relative"></Button>
+            <div className="flex items-center gap-2 lg:gap-3 ml-auto">
               <NotificationDialog />
+
+              {/* Profile Icon */}
               <div
-                className="hidden sm:flex items-center gap-3 pl-3 border-l border-border cursor-pointer"
+                className="flex items-center gap-3 pl-3 border-l border-border cursor-pointer"
                 onClick={() => navigate("/profile")}
               >
                 <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center">
                   <span className="text-sm font-medium text-primary-foreground">
-                    {user?.full_name.charAt(0)}
+                    {user?.full_name?.charAt(0) || "U"}
                   </span>
                 </div>
               </div>

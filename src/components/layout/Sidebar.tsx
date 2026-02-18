@@ -121,6 +121,7 @@ function isNavGroup(item: NavItem | NavGroup): item is NavGroup {
 }
 
 const clinicAdminNav: NavConfig = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Users", href: "/users", icon: Users },
   {
     label: "Appointments",
@@ -139,8 +140,6 @@ const clinicAdminNav: NavConfig = [
       },
     ],
   },
-
-  { label: "Doctors", href: "/doctors", icon: Stethoscope },
 
   {
     label: "Queue",
@@ -302,9 +301,7 @@ const simpleNavItems: Record<
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Create Clinic", href: "/create/clinic", icon: Hospital },
     { label: "Clinic Management", href: "/Clinics", icon: Settings },
-    { label: "Users", href: "/users", icon: Users },
     { label: "Role Permissions", href: "/role-permissions", icon: UserCog },
-    { label: "Reports", href: "/reports", icon: BarChart3 },
   ],
   pharmacist: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },

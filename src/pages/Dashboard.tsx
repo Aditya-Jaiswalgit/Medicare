@@ -9,6 +9,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 // import { LabTechnicianDashboard } from "@/components/dashboard/LabTechnicianDashboard";
 import { SuperAdminDashboard } from "./SuperAdminDashboard";
 import { DoctorDashboard } from "./DoctorAdminDashboard";
+import { ClinicAdminDashboard } from "./ClinicAdminDashboard";
 
 export default function Dashboard() {
   const { user, role } = useAuth();
@@ -24,8 +25,8 @@ export default function Dashboard() {
     switch (role) {
       case "super_admin":
         return <SuperAdminDashboard />;
-      // case "clinic_admin":
-      //   return <ClinicAdminDashboard />;
+      case "clinic_admin":
+        return <ClinicAdminDashboard />;
       case "doctor":
         return <DoctorDashboard />;
       // case "patient":
