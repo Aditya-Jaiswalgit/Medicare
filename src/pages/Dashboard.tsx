@@ -1,15 +1,13 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-// import { ClinicAdminDashboard } from "@/components/dashboard/ClinicAdminDashboard";
-// import { DoctorDashboard } from "@/components/dashboard/DoctorDashboard";
-// import { PatientDashboard } from "@/components/dashboard/PatientDashboard";
-// import { PharmacistDashboard } from "@/components/dashboard/PharmacistDashboard";
-// import { ReceptionistDashboard } from "@/components/dashboard/ReceptionistDashboard";
-// import { AccountantDashboard } from "@/components/dashboard/AccountantDashboard";
-// import { LabTechnicianDashboard } from "@/components/dashboard/LabTechnicianDashboard";
 import { SuperAdminDashboard } from "./SuperAdminDashboard";
 import { DoctorDashboard } from "./DoctorAdminDashboard";
 import { ClinicAdminDashboard } from "./ClinicAdminDashboard";
+import { ReceptionistDashboard } from "./ReceptionistDashboard";
+import { PharmacistDashboard } from "./PharmacistDashboard";
+import { AccountantDashboard } from "./AccountantDashboard";
+import { LabTechnicianDashboard } from "./LabTechnicianDashboard";
+import { PatientDashboard } from "./PatientDashboard";
 
 export default function Dashboard() {
   const { user, role } = useAuth();
@@ -29,16 +27,16 @@ export default function Dashboard() {
         return <ClinicAdminDashboard />;
       case "doctor":
         return <DoctorDashboard />;
-      // case "patient":
-      //   return <PatientDashboard />;
-      // case "pharmacist":
-      //   return <PharmacistDashboard />;
-      // case "receptionist":
-      //   return <ReceptionistDashboard />;
-      // case "accountant":
-      //   return <AccountantDashboard />;
-      // case "lab_technician":
-      //   return <LabTechnicianDashboard />;
+      case "patient":
+        return <PatientDashboard />;
+      case "pharmacist":
+        return <PharmacistDashboard />;
+      case "receptionist":
+        return <ReceptionistDashboard />;
+      case "accountant":
+        return <AccountantDashboard />;
+      case "lab_technician":
+        return <LabTechnicianDashboard />;
       default:
         return (
           <div className="text-center p-8 text-muted-foreground">

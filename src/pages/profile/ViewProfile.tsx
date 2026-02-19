@@ -401,7 +401,7 @@ export default function ViewProfile() {
 
               <Separator />
 
-              <h4 className="font-medium">Address</h4>
+              {/* <h4 className="font-medium">Address</h4> */}
               <div className="space-y-2">
                 <Label htmlFor="address">Address</Label>
                 <Input

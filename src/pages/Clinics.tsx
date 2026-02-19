@@ -56,6 +56,7 @@ import {
   Eye,
   UserCog,
   Loader2,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -76,6 +77,18 @@ interface Clinic {
   admin_count: string;
 }
 
+interface ClinicAdmin {
+  id: string;
+  email: string;
+  full_name: string;
+  phone: string;
+  address: string;
+  clinic_id: string;
+  clinic_name: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 interface Pagination {
   total: number;
   page: number;
@@ -86,6 +99,12 @@ interface Pagination {
 interface ApiResponse {
   success: boolean;
   data: Clinic[];
+  pagination: Pagination;
+}
+
+interface ClinicAdminsApiResponse {
+  success: boolean;
+  data: ClinicAdmin[];
   pagination: Pagination;
 }
 
@@ -127,17 +146,76 @@ const clinicAdminFormSchema = z.object({
     .max(500, { message: "Address must be less than 500 characters" }),
 });
 
+// Form schema for editing clinic admin
+const editClinicAdminFormSchema = z.object({
+  full_name: z
+    .string()
+    .trim()
+    .min(2, { message: "Name must be at least 2 characters" })
+    .max(100, { message: "Name must be less than 100 characters" }),
+  phone: z
+    .string()
+    .trim()
+    .min(10, { message: "Phone number must be at least 10 digits" })
+    .max(20, { message: "Phone number must be less than 20 characters" })
+    .regex(/^[+]?[\d\s-]+$/, { message: "Please enter a valid phone number" }),
+  address: z
+    .string()
+    .trim()
+    .min(5, { message: "Address must be at least 5 characters" })
+    .max(500, { message: "Address must be less than 500 characters" }),
+  is_active: z.boolean().optional(),
+});
+
+// Form schema for editing clinic
+const editClinicFormSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, { message: "Clinic name must be at least 2 characters" })
+    .max(255, { message: "Clinic name must be less than 255 characters" }),
+  email: z
+    .string()
+    .trim()
+    .email({ message: "Please enter a valid email address" })
+    .max(255, { message: "Email must be less than 255 characters" }),
+  phone: z
+    .string()
+    .trim()
+    .min(10, { message: "Phone number must be at least 10 digits" })
+    .max(20, { message: "Phone number must be less than 20 characters" })
+    .regex(/^[+]?[\d\s-]+$/, { message: "Please enter a valid phone number" }),
+  address: z
+    .string()
+    .trim()
+    .min(5, { message: "Address must be at least 5 characters" })
+    .max(500, { message: "Address must be less than 500 characters" }),
+});
+
 type ClinicAdminFormValues = z.infer<typeof clinicAdminFormSchema>;
+type EditClinicAdminFormValues = z.infer<typeof editClinicAdminFormSchema>;
+type EditClinicFormValues = z.infer<typeof editClinicFormSchema>;
 
 export default function Clinics() {
   const navigate = useNavigate();
   const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [clinicAdmins, setClinicAdmins] = useState<ClinicAdmin[]>([]);
   const [filteredClinics, setFilteredClinics] = useState<Clinic[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingAdmins, setIsLoadingAdmins] = useState(false);
+
+  // Dialog states
   const [isAddClinicAdminOpen, setIsAddClinicAdminOpen] = useState(false);
+  const [isEditClinicAdminOpen, setIsEditClinicAdminOpen] = useState(false);
+  const [isEditClinicOpen, setIsEditClinicOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isViewAdminsOpen, setIsViewAdminsOpen] = useState(false);
+
   const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
+  const [selectedClinicAdmin, setSelectedClinicAdmin] =
+    useState<ClinicAdmin | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pagination, setPagination] = useState<Pagination>({
     total: 0,
@@ -146,12 +224,33 @@ export default function Clinics() {
     pages: 1,
   });
 
-  const form = useForm<ClinicAdminFormValues>({
+  // Forms
+  const addAdminForm = useForm<ClinicAdminFormValues>({
     resolver: zodResolver(clinicAdminFormSchema),
     defaultValues: {
       email: "",
       password: "",
       full_name: "",
+      phone: "",
+      address: "",
+    },
+  });
+
+  const editAdminForm = useForm<EditClinicAdminFormValues>({
+    resolver: zodResolver(editClinicAdminFormSchema),
+    defaultValues: {
+      full_name: "",
+      phone: "",
+      address: "",
+      is_active: true,
+    },
+  });
+
+  const editClinicForm = useForm<EditClinicFormValues>({
+    resolver: zodResolver(editClinicFormSchema),
+    defaultValues: {
+      name: "",
+      email: "",
       phone: "",
       address: "",
     },
@@ -200,6 +299,42 @@ export default function Clinics() {
     }
   };
 
+  const fetchClinicAdmins = async (clinicId?: string) => {
+    setIsLoadingAdmins(true);
+    setClinicAdmins([]);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        "http://localhost:5000/api/super-admin/clinic-admins?limit=100",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const result: ClinicAdminsApiResponse = await response.json();
+      if (result.success) {
+        // Filter client-side since backend doesn't support clinic_id filter
+        const filtered = clinicId
+          ? result.data.filter((admin) => admin.clinic_id === clinicId)
+          : result.data;
+        setClinicAdmins(filtered);
+      } else {
+        throw new Error("Failed to fetch clinic admins");
+      }
+    } catch (error) {
+      console.error("Error fetching clinic admins:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load clinic admins",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingAdmins(false);
+    }
+  };
+
   const filterClinics = () => {
     let filtered = [...clinics];
 
@@ -224,47 +359,130 @@ export default function Clinics() {
     setFilteredClinics(filtered);
   };
 
-  const handleDelete = async (clinic: Clinic) => {
-    if (confirm(`Are you sure you want to delete ${clinic.name}?`)) {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(
-          `http://localhost:5000/api/super-admin/clinics/${clinic.id}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+  const handleDeleteClinic = async () => {
+    if (!selectedClinic) return;
+
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `http://localhost:5000/api/super-admin/clinics/${selectedClinic.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
           },
-        );
+        },
+      );
 
-        const result = await response.json();
+      const result = await response.json();
 
-        if (result.success) {
-          toast({
-            title: "Success",
-            description: "Clinic deleted successfully",
-          });
-          fetchClinics(); // Refresh the list
-        } else {
-          throw new Error(result.message || "Failed to delete clinic");
-        }
-      } catch (error) {
-        console.error("Error deleting clinic:", error);
+      if (result.success) {
         toast({
-          title: "Error",
-          description:
-            error instanceof Error ? error.message : "Failed to delete clinic",
-          variant: "destructive",
+          title: "Success",
+          description: "Clinic deleted successfully",
         });
+        fetchClinics(); // Refresh the list
+        setIsDeleteConfirmOpen(false);
+        setSelectedClinic(null);
+      } else {
+        throw new Error(result.message || "Failed to delete clinic");
       }
+    } catch (error) {
+      console.error("Error deleting clinic:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to delete clinic",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteClinicAdmin = async () => {
+    if (!selectedClinicAdmin) return;
+
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `http://localhost:5000/api/super-admin/clinic-admins/${selectedClinicAdmin.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Clinic admin deleted successfully",
+        });
+
+        // Refresh admins list if view is open
+        if (isViewAdminsOpen && selectedClinic) {
+          fetchClinicAdmins(selectedClinic.id);
+        }
+
+        fetchClinics(); // Refresh to update admin count
+        setIsDeleteConfirmOpen(false);
+        setSelectedClinicAdmin(null);
+      } else {
+        throw new Error(result.message || "Failed to delete clinic admin");
+      }
+    } catch (error) {
+      console.error("Error deleting clinic admin:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to delete clinic admin",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleAddClinicAdmin = (clinic: Clinic) => {
     setSelectedClinic(clinic);
     setIsAddClinicAdminOpen(true);
-    form.reset();
+    addAdminForm.reset();
+  };
+
+  const handleEditClinicAdmin = (admin: ClinicAdmin) => {
+    setSelectedClinicAdmin(admin);
+    editAdminForm.reset({
+      full_name: admin.full_name,
+      phone: admin.phone,
+      address: admin.address,
+      is_active: admin.is_active,
+    });
+    setIsEditClinicAdminOpen(true);
+  };
+
+  const handleEditClinic = (clinic: Clinic) => {
+    setSelectedClinic(clinic);
+    editClinicForm.reset({
+      name: clinic.name,
+      email: clinic.email,
+      phone: clinic.phone,
+      address: clinic.address,
+    });
+    setIsEditClinicOpen(true);
+  };
+
+  const handleViewClinicAdmins = (clinic: Clinic) => {
+    setSelectedClinic(clinic);
+    fetchClinicAdmins(clinic.id);
+    setIsViewAdminsOpen(true);
   };
 
   const handleSubmitClinicAdmin = async (data: ClinicAdminFormValues) => {
@@ -301,7 +519,7 @@ export default function Clinics() {
 
       setIsAddClinicAdminOpen(false);
       setSelectedClinic(null);
-      form.reset();
+      addAdminForm.reset();
       fetchClinics(); // Refresh to update admin count
     } catch (error) {
       console.error("Error creating clinic admin:", error);
@@ -311,6 +529,106 @@ export default function Clinics() {
           error instanceof Error
             ? error.message
             : "Failed to create clinic admin",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateClinicAdmin = async (data: EditClinicAdminFormValues) => {
+    if (!selectedClinicAdmin) return;
+
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `http://localhost:5000/api/super-admin/clinic-admins/${selectedClinicAdmin.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(data),
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to update clinic admin");
+      }
+
+      toast({
+        title: "Success!",
+        description: `Clinic admin "${data.full_name}" updated successfully`,
+      });
+
+      setIsEditClinicAdminOpen(false);
+      setSelectedClinicAdmin(null);
+      editAdminForm.reset();
+
+      // Refresh admins list if view is open
+      if (isViewAdminsOpen && selectedClinic) {
+        fetchClinicAdmins(selectedClinic.id);
+      }
+
+      fetchClinics(); // Refresh to update admin count
+    } catch (error) {
+      console.error("Error updating clinic admin:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to update clinic admin",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateClinic = async (data: EditClinicFormValues) => {
+    if (!selectedClinic) return;
+
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `http://localhost:5000/api/super-admin/clinics/${selectedClinic.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(data),
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to update clinic");
+      }
+
+      toast({
+        title: "Success!",
+        description: `Clinic "${data.name}" updated successfully`,
+      });
+
+      setIsEditClinicOpen(false);
+      setSelectedClinic(null);
+      editClinicForm.reset();
+      fetchClinics(); // Refresh the list
+    } catch (error) {
+      console.error("Error updating clinic:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to update clinic",
         variant: "destructive",
       });
     } finally {
@@ -400,7 +718,9 @@ export default function Clinics() {
                       0,
                     )}
                   </p>
-                  <p className="text-sm text-muted-foreground">Total Admins</p>
+                  <p className="text-sm text-muted-foreground">
+                    Total Clinic Admins
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -526,10 +846,15 @@ export default function Clinics() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1"
+                          onClick={() => handleViewClinicAdmins(clinic)}
+                        >
                           <Users className="w-3 h-3" />
                           {clinic.admin_count || "0"}
-                        </Badge>
+                        </Button>
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -557,16 +882,14 @@ export default function Clinics() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
                               className="gap-2"
-                              onClick={() => navigate(`/clinics/${clinic.id}`)}
+                              onClick={() => handleViewClinicAdmins(clinic)}
                             >
-                              <Eye className="w-4 h-4" />
-                              View Details
+                              <Users className="w-4 h-4" />
+                              View Admins
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="gap-2"
-                              onClick={() =>
-                                navigate(`/clinics/edit/${clinic.id}`)
-                              }
+                              onClick={() => handleEditClinic(clinic)}
                             >
                               <Edit className="w-4 h-4" />
                               Edit Clinic
@@ -576,11 +899,14 @@ export default function Clinics() {
                               onClick={() => handleAddClinicAdmin(clinic)}
                             >
                               <UserCog className="w-4 h-4" />
-                              Add Clinic Admin
+                              Add Admin
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="gap-2 text-destructive"
-                              onClick={() => handleDelete(clinic)}
+                              onClick={() => {
+                                setSelectedClinic(clinic);
+                                setIsDeleteConfirmOpen(true);
+                              }}
                             >
                               <Trash2 className="w-4 h-4" />
                               Delete Clinic
@@ -634,9 +960,9 @@ export default function Clinics() {
             </DialogDescription>
           </DialogHeader>
 
-          <Form {...form}>
+          <Form {...addAdminForm}>
             <form
-              onSubmit={form.handleSubmit(handleSubmitClinicAdmin)}
+              onSubmit={addAdminForm.handleSubmit(handleSubmitClinicAdmin)}
               className="space-y-6"
             >
               <div className="space-y-4">
@@ -645,7 +971,7 @@ export default function Clinics() {
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
-                    control={form.control}
+                    control={addAdminForm.control}
                     name="full_name"
                     render={({ field }) => (
                       <FormItem>
@@ -659,7 +985,7 @@ export default function Clinics() {
                   />
 
                   <FormField
-                    control={form.control}
+                    control={addAdminForm.control}
                     name="email"
                     render={({ field }) => (
                       <FormItem>
@@ -677,7 +1003,7 @@ export default function Clinics() {
                   />
 
                   <FormField
-                    control={form.control}
+                    control={addAdminForm.control}
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
@@ -695,7 +1021,7 @@ export default function Clinics() {
                   />
 
                   <FormField
-                    control={form.control}
+                    control={addAdminForm.control}
                     name="password"
                     render={({ field }) => (
                       <FormItem>
@@ -733,7 +1059,7 @@ export default function Clinics() {
                   Address Information
                 </h3>
                 <FormField
-                  control={form.control}
+                  control={addAdminForm.control}
                   name="address"
                   render={({ field }) => (
                     <FormItem>
@@ -775,7 +1101,7 @@ export default function Clinics() {
                   onClick={() => {
                     setIsAddClinicAdminOpen(false);
                     setSelectedClinic(null);
-                    form.reset();
+                    addAdminForm.reset();
                   }}
                   disabled={isSubmitting}
                 >
@@ -797,6 +1123,446 @@ export default function Clinics() {
               </div>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Clinic Dialog */}
+      <Dialog open={isEditClinicOpen} onOpenChange={setIsEditClinicOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <Edit className="w-5 h-5" />
+              Edit Clinic: {selectedClinic?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Update clinic information. Fields marked with * are required.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...editClinicForm}>
+            <form
+              onSubmit={editClinicForm.handleSubmit(handleUpdateClinic)}
+              className="space-y-6"
+            >
+              <div className="grid grid-cols-1 gap-4">
+                <FormField
+                  control={editClinicForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Clinic Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter clinic name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={editClinicForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Address *</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="clinic@example.com"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editClinicForm.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number *</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="tel"
+                            placeholder="9876543210"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={editClinicForm.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address *</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Enter clinic address"
+                          className="resize-none"
+                          rows={3}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditClinicOpen(false);
+                    setSelectedClinic(null);
+                    editClinicForm.reset();
+                  }}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <Edit className="w-4 h-4 mr-2" />
+                      Update Clinic
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Clinic Admins Dialog */}
+      <Dialog open={isViewAdminsOpen} onOpenChange={setIsViewAdminsOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Clinic Admins - {selectedClinic?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Manage administrators for this clinic
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <Button
+                onClick={() => {
+                  setIsViewAdminsOpen(false);
+                  handleAddClinicAdmin(selectedClinic!);
+                }}
+                size="sm"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add New Admin
+              </Button>
+            </div>
+
+            {isLoadingAdmins ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="rounded-lg border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="w-24">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {clinicAdmins.map((admin) => (
+                      <TableRow key={admin.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                              <User className="w-4 h-4 text-primary" />
+                            </div>
+                            <span className="font-medium">
+                              {admin.full_name}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{admin.email}</TableCell>
+                        <TableCell>{admin.phone}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={admin.is_active ? "default" : "secondary"}
+                            className={cn(
+                              admin.is_active
+                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+                            )}
+                          >
+                            {admin.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                setIsViewAdminsOpen(false);
+                                handleEditClinicAdmin(admin);
+                              }}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => {
+                                setSelectedClinicAdmin(admin);
+                                setIsDeleteConfirmOpen(true);
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {clinicAdmins.length === 0 && !isLoadingAdmins && (
+              <div className="text-center py-8">
+                <User className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  No clinic admins found for this clinic
+                </p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Clinic Admin Dialog */}
+      <Dialog
+        open={isEditClinicAdminOpen}
+        onOpenChange={setIsEditClinicAdminOpen}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <Edit className="w-5 h-5" />
+              Edit Clinic Admin: {selectedClinicAdmin?.full_name}
+            </DialogTitle>
+            <DialogDescription>
+              Update clinic administrator information
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...editAdminForm}>
+            <form
+              onSubmit={editAdminForm.handleSubmit(handleUpdateClinicAdmin)}
+              className="space-y-6"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={editAdminForm.control}
+                  name="full_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter full name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editAdminForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number *</FormLabel>
+                      <FormControl>
+                        <Input type="tel" placeholder="9876543210" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={editAdminForm.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address *</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Enter clinic admin's address"
+                        className="resize-none"
+                        rows={2}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editAdminForm.control}
+                name="is_active"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Active Status</FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        Enable or disable this admin's access
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Select
+                        value={field.value ? "true" : "false"}
+                        onValueChange={(value) =>
+                          field.onChange(value === "true")
+                        }
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">Active</SelectItem>
+                          <SelectItem value="false">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditClinicAdminOpen(false);
+                    setSelectedClinicAdmin(null);
+                    editAdminForm.reset();
+                  }}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <Edit className="w-4 h-4 mr-2" />
+                      Update Admin
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2 text-destructive">
+              <Trash2 className="w-5 h-5" />
+              Confirm Deletion
+            </DialogTitle>
+            <DialogDescription>
+              {selectedClinicAdmin ? (
+                <>
+                  Are you sure you want to delete clinic admin{" "}
+                  <span className="font-medium text-foreground">
+                    {selectedClinicAdmin.full_name}
+                  </span>
+                  ? This action cannot be undone.
+                </>
+              ) : selectedClinic ? (
+                <>
+                  Are you sure you want to delete clinic{" "}
+                  <span className="font-medium text-foreground">
+                    {selectedClinic.name}
+                  </span>
+                  ? This will also soft delete all associated data. This action
+                  cannot be undone.
+                </>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsDeleteConfirmOpen(false);
+                setSelectedClinic(null);
+                setSelectedClinicAdmin(null);
+              }}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={
+                selectedClinicAdmin
+                  ? handleDeleteClinicAdmin
+                  : handleDeleteClinic
+              }
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </>
+              )}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </DashboardLayout>
