@@ -33,7 +33,7 @@ export function PatientDashboard() {
       try {
         const token = localStorage.getItem("token");
         const response = await fetch(
-          "http://localhost:5000/api/role/dashboard",
+          "http://localhost:5000/api/patient/dashboard",
           {
             headers: {
               Authorization: `Bearer ${token}`,

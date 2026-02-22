@@ -233,11 +233,7 @@ const receptionistNav: NavConfig = [
   {
     label: "Patients",
     icon: Users,
-    items: [
-      { label: "Register Patient", href: "/patients/register", icon: UserPlus },
-      { label: "Patient List", href: "/patients", icon: Users },
-      { label: "Search Patient", href: "/patients/search", icon: Search },
-    ],
+    href: "/patients/register",
   },
 
   {
@@ -320,8 +316,8 @@ const simpleNavItems: Record<
   ],
   patient: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { label: "Appointments", href: "/appointments", icon: Calendar },
-    { label: "Bills", href: "/billing/invoices", icon: CreditCard },
+    { label: "Appointments", href: "/myappointments", icon: Calendar },
+    { label: "Bills", href: "/mybills", icon: CreditCard },
   ],
 };
 
