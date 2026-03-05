@@ -1,97 +1,166 @@
-import { useState } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
+import { useState, useEffect } from "react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { 
-  CalendarDays, 
-  Clock, 
-  User, 
-  Stethoscope, 
+} from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  CalendarDays,
+  Clock,
+  User,
+  Stethoscope,
   Phone,
   Search,
   Plus,
-  CheckCircle
-} from 'lucide-react';
-import { format, parse, isValid } from 'date-fns';
-import { toast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+  CheckCircle,
+  Loader2,
+} from "lucide-react";
+import { format, parse, isValid } from "date-fns";
+import { toast } from "@/hooks/use-toast";
 
 interface Patient {
   id: string;
-  name: string;
-  phone: string;
-  patientCode: string;
+  full_name: string;
+  email: string;
+  patientCode?: string;
+}
+interface Doctor {
+  id: string;
+  full_name: string; // ← was "name"
+  department: string;
+  specialization: string;
 }
 
-const mockPatients: Patient[] = [
-  { id: '1', name: 'John Smith', phone: '+1 234 567 8901', patientCode: 'PAT001' },
-  { id: '2', name: 'Sarah Johnson', phone: '+1 234 567 8902', patientCode: 'PAT002' },
-  { id: '3', name: 'Michael Brown', phone: '+1 234 567 8903', patientCode: 'PAT003' },
-  { id: '4', name: 'Emily Davis', phone: '+1 234 567 8904', patientCode: 'PAT004' },
-  { id: '5', name: 'Robert Wilson', phone: '+1 234 567 8905', patientCode: 'PAT005' },
-];
-
-const doctors = [
-  { id: '1', name: 'Dr. James Wilson', department: 'Cardiology' },
-  { id: '2', name: 'Dr. Emily Chen', department: 'Dermatology' },
-  { id: '3', name: 'Dr. Sarah Johnson', department: 'Pediatrics' },
-  { id: '4', name: 'Dr. Robert Taylor', department: 'Neurology' },
-  { id: '5', name: 'Dr. Michael Brown', department: 'Orthopedics' },
-];
-
-const timeSlots = [
-  '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
-  '12:00 PM', '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM', '05:00 PM'
-];
-
-const appointmentTypes = [
-  'New Consultation',
-  'Follow-up',
-  'Routine Checkup',
-  'Emergency',
-  'Lab Review',
-  'Vaccination',
-];
-
-const bookingSources = ['Walk-in', 'Phone', 'Online', 'Mobile App'];
+interface ApiResponse<T> {
+  success: boolean;
+  message?: string;
+  data: T;
+}
 
 export default function BookAppointment() {
-  const [patientSearch, setPatientSearch] = useState('');
+  const { token, isLoading } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+
+  // Form state
+  const [patientSearch, setPatientSearch] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [selectedDoctor, setSelectedDoctor] = useState('');
-  const [appointmentDate, setAppointmentDate] = useState<Date | undefined>(undefined);
-  const [dateInputValue, setDateInputValue] = useState('');
-  const [selectedTime, setSelectedTime] = useState('');
-  const [appointmentType, setAppointmentType] = useState('');
-  const [bookingSource, setBookingSource] = useState('');
-  const [reason, setReason] = useState('');
-  const [symptoms, setSymptoms] = useState('');
-  const [notes, setNotes] = useState('');
+  const [selectedDoctor, setSelectedDoctor] = useState("");
+  const [appointmentDate, setAppointmentDate] = useState<Date | undefined>(
+    undefined,
+  );
+  const [dateInputValue, setDateInputValue] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
+  const [appointmentType, setAppointmentType] = useState("");
+  const [bookingSource, setBookingSource] = useState("");
+  const [reason, setReason] = useState("");
+  const [symptoms, setSymptoms] = useState("");
+  const [notes, setNotes] = useState("");
+  const [duration, setDuration] = useState("30");
   const [showPatientResults, setShowPatientResults] = useState(false);
 
-  const filteredPatients = mockPatients.filter(
+  // Fetch patients on mount
+  useEffect(() => {
+    if (!isLoading && token) {
+      fetchPatients();
+      fetchDoctors();
+    }
+  }, [isLoading, token]);
+
+  // Fetch available time slots when doctor and date are selected
+  const fetchPatients = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/receptionist/patients",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch patients");
+
+      const result: ApiResponse<Patient[]> = await response.json();
+      if (result.success) {
+        setPatients(result.data);
+      }
+    } catch (error) {
+      console.error("Error fetching patients:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load patients",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchDoctors = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/receptionist/doctors",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch doctors");
+
+      const result: ApiResponse<Doctor[]> = await response.json();
+      if (result.success) {
+        setDoctors(result.data);
+      }
+    } catch (error) {
+      console.error("Error fetching doctors:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load doctors",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Filter
+  const filteredPatients = patients.filter(
     (p) =>
-      p.name.toLowerCase().includes(patientSearch.toLowerCase()) ||
-      p.phone.includes(patientSearch) ||
-      p.patientCode.toLowerCase().includes(patientSearch.toLowerCase())
+      p.full_name?.toLowerCase().includes(patientSearch.toLowerCase()) ||
+      p.phone?.includes(patientSearch),
   );
+  const handleSelectPatient = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setPatientSearch(patient.full_name); // ← was patient.name
+    setShowPatientResults(false);
+  };
+  // Select patient
 
   const handleDateInputChange = (value: string) => {
     setDateInputValue(value);
-    const parsed = parse(value, 'dd/MM/yyyy', new Date());
+    const parsed = parse(value, "dd/MM/yyyy", new Date());
     if (isValid(parsed)) {
       setAppointmentDate(parsed);
     }
@@ -100,57 +169,111 @@ export default function BookAppointment() {
   const handleCalendarSelect = (date: Date | undefined) => {
     setAppointmentDate(date);
     if (date) {
-      setDateInputValue(format(date, 'dd/MM/yyyy'));
+      setDateInputValue(format(date, "dd/MM/yyyy"));
+      setSelectedTime(""); // Reset time when date changes
     }
   };
 
-  const handleSelectPatient = (patient: Patient) => {
-    setSelectedPatient(patient);
-    setPatientSearch(patient.name);
-    setShowPatientResults(false);
-  };
-
-  const handleBookAppointment = () => {
+  const handleBookAppointment = async () => {
+    // Validation
     if (!selectedPatient) {
-      toast({ title: 'Error', description: 'Please select a patient', variant: 'destructive' });
+      toast({
+        title: "Error",
+        description: "Please select a patient",
+        variant: "destructive",
+      });
       return;
     }
     if (!selectedDoctor) {
-      toast({ title: 'Error', description: 'Please select a doctor', variant: 'destructive' });
+      toast({
+        title: "Error",
+        description: "Please select a doctor",
+        variant: "destructive",
+      });
       return;
     }
     if (!appointmentDate) {
-      toast({ title: 'Error', description: 'Please select appointment date', variant: 'destructive' });
+      toast({
+        title: "Error",
+        description: "Please select appointment date",
+        variant: "destructive",
+      });
       return;
     }
     if (!selectedTime) {
-      toast({ title: 'Error', description: 'Please select appointment time', variant: 'destructive' });
+      toast({
+        title: "Error",
+        description: "Please select appointment time",
+        variant: "destructive",
+      });
       return;
     }
-    if (!appointmentType) {
-      toast({ title: 'Error', description: 'Please select appointment type', variant: 'destructive' });
-      return;
+
+    try {
+      setLoading(true);
+
+      const appointmentData = {
+        patient_id: selectedPatient.id,
+        doctor_id: selectedDoctor,
+        appointment_date: format(appointmentDate, "yyyy-MM-dd"),
+        appointment_time: selectedTime,
+        reason: reason || appointmentType,
+        duration_minutes: parseInt(duration),
+        type: appointmentType,
+        booking_source: bookingSource,
+        symptoms: symptoms,
+        notes: notes,
+      };
+
+      const response = await fetch(
+        "http://localhost:5000/api/receptionist/appointments",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(appointmentData),
+        },
+      );
+
+      const result: ApiResponse<any> = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to book appointment");
+      }
+
+      if (result.success) {
+        toast({
+          title: "Success!",
+          description: `Appointment booked successfully for ${format(appointmentDate, "dd MMM yyyy")} at ${selectedTime}`,
+        });
+
+        // Reset form
+        setSelectedPatient(null);
+        setPatientSearch("");
+        setSelectedDoctor("");
+        setAppointmentDate(undefined);
+        setDateInputValue("");
+        setSelectedTime("");
+        setAppointmentType("");
+        setBookingSource("");
+        setReason("");
+        setSymptoms("");
+        setNotes("");
+        setDuration("30");
+      }
+    } catch (error) {
+      console.error("Error booking appointment:", error);
+      toast({
+        title: "Error",
+        description:
+          error.message || "Failed to book appointment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-
-    const doctor = doctors.find(d => d.id === selectedDoctor);
-
-    toast({
-      title: 'Appointment Booked Successfully!',
-      description: `Appointment for ${selectedPatient.name} with ${doctor?.name} on ${format(appointmentDate, 'dd MMM yyyy')} at ${selectedTime}`,
-    });
-
-    // Reset form
-    setSelectedPatient(null);
-    setPatientSearch('');
-    setSelectedDoctor('');
-    setAppointmentDate(undefined);
-    setDateInputValue('');
-    setSelectedTime('');
-    setAppointmentType('');
-    setBookingSource('');
-    setReason('');
-    setSymptoms('');
-    setNotes('');
   };
 
   return (
@@ -162,7 +285,9 @@ export default function BookAppointment() {
             <CalendarDays className="w-6 h-6" />
             Book Appointment
           </h1>
-          <p className="text-muted-foreground">Schedule a new appointment for a patient</p>
+          <p className="text-muted-foreground">
+            Schedule a new appointment for a patient
+          </p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
@@ -186,7 +311,10 @@ export default function BookAppointment() {
                     onChange={(e) => {
                       setPatientSearch(e.target.value);
                       setShowPatientResults(true);
-                      if (selectedPatient && e.target.value !== selectedPatient.name) {
+                      if (
+                        selectedPatient &&
+                        e.target.value !== selectedPatient.full_name
+                      ) {
                         setSelectedPatient(null);
                       }
                     }}
@@ -204,10 +332,16 @@ export default function BookAppointment() {
                           >
                             <div className="flex items-center justify-between">
                               <div>
-                                <p className="font-medium">{patient.name}</p>
-                                <p className="text-sm text-muted-foreground">{patient.phone}</p>
+                                <p className="font-medium">
+                                  {patient.full_name}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {patient.phone}
+                                </p>
                               </div>
-                              <Badge variant="outline">{patient.patientCode}</Badge>
+                              <Badge variant="outline">
+                                {patient.patientCode}
+                              </Badge>
                             </div>
                           </div>
                         ))
@@ -227,13 +361,17 @@ export default function BookAppointment() {
                         <User className="w-6 h-6 text-primary" />
                       </div>
                       <div className="flex-1">
-                        <p className="font-medium text-lg">{selectedPatient.name}</p>
+                        <p className="font-medium text-lg">
+                          {selectedPatient.full_name}
+                        </p>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Phone className="w-3 h-3" />
                             {selectedPatient.phone}
                           </span>
-                          <Badge variant="outline">{selectedPatient.patientCode}</Badge>
+                          <Badge variant="outline">
+                            {selectedPatient.patientCode}
+                          </Badge>
                         </div>
                       </div>
                       <CheckCircle className="w-5 h-5 text-primary" />
@@ -255,7 +393,10 @@ export default function BookAppointment() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Select Doctor *</Label>
-                    <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
+                    <Select
+                      value={selectedDoctor}
+                      onValueChange={setSelectedDoctor}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Choose a doctor" />
                       </SelectTrigger>
@@ -263,8 +404,10 @@ export default function BookAppointment() {
                         {doctors.map((doctor) => (
                           <SelectItem key={doctor.id} value={doctor.id}>
                             <div className="flex items-center gap-2">
-                              <span>{doctor.name}</span>
-                              <span className="text-muted-foreground">({doctor.department})</span>
+                              <span>{doctor.full_name}</span>
+                              <span className="text-muted-foreground">
+                                ({doctor.department})
+                              </span>
                             </div>
                           </SelectItem>
                         ))}
@@ -274,14 +417,24 @@ export default function BookAppointment() {
 
                   <div className="space-y-2">
                     <Label>Appointment Type *</Label>
-                    <Select value={appointmentType} onValueChange={setAppointmentType}>
+                    <Select
+                      value={appointmentType}
+                      onValueChange={setAppointmentType}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
-                        {appointmentTypes.map((type) => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
+                        <SelectItem value="New Consultation">
+                          New Consultation
+                        </SelectItem>
+                        <SelectItem value="Follow-up">Follow-up</SelectItem>
+                        <SelectItem value="Routine Checkup">
+                          Routine Checkup
+                        </SelectItem>
+                        <SelectItem value="Emergency">Emergency</SelectItem>
+                        <SelectItem value="Lab Review">Lab Review</SelectItem>
+                        <SelectItem value="Vaccination">Vaccination</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -296,7 +449,9 @@ export default function BookAppointment() {
                           <Input
                             placeholder="DD/MM/YYYY"
                             value={dateInputValue}
-                            onChange={(e) => handleDateInputChange(e.target.value)}
+                            onChange={(e) =>
+                              handleDateInputChange(e.target.value)
+                            }
                             className="pr-10"
                           />
                           <CalendarDays className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground cursor-pointer" />
@@ -307,7 +462,9 @@ export default function BookAppointment() {
                           mode="single"
                           selected={appointmentDate}
                           onSelect={handleCalendarSelect}
-                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                          disabled={(date) =>
+                            date < new Date(new Date().setHours(0, 0, 0, 0))
+                          }
                           initialFocus
                         />
                       </PopoverContent>
@@ -316,47 +473,57 @@ export default function BookAppointment() {
 
                   <div className="space-y-2">
                     <Label>Appointment Time *</Label>
-                    <Select value={selectedTime} onValueChange={setSelectedTime}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select time slot" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {timeSlots.map((slot) => (
-                          <SelectItem key={slot} value={slot}>
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-3 h-3" />
-                              {slot}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      type="time"
+                      value={selectedTime}
+                      onChange={(e) => setSelectedTime(e.target.value)}
+                      disabled={!selectedDoctor || !appointmentDate}
+                    />
                   </div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Booking Source</Label>
-                    <Select value={bookingSource} onValueChange={setBookingSource}>
+                    <Select
+                      value={bookingSource}
+                      onValueChange={setBookingSource}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select source" />
                       </SelectTrigger>
                       <SelectContent>
-                        {bookingSources.map((source) => (
-                          <SelectItem key={source} value={source}>{source}</SelectItem>
-                        ))}
+                        <SelectItem value="Walk-in">Walk-in</SelectItem>
+                        <SelectItem value="Phone">Phone</SelectItem>
+                        <SelectItem value="Online">Online</SelectItem>
+                        <SelectItem value="Mobile App">Mobile App</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Reason for Visit</Label>
-                    <Input
-                      placeholder="Brief reason..."
-                      value={reason}
-                      onChange={(e) => setReason(e.target.value)}
-                    />
+                    <Label>Duration (minutes)</Label>
+                    <Select value={duration} onValueChange={setDuration}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select duration" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="15">15 minutes</SelectItem>
+                        <SelectItem value="30">30 minutes</SelectItem>
+                        <SelectItem value="45">45 minutes</SelectItem>
+                        <SelectItem value="60">60 minutes</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Reason for Visit</Label>
+                  <Input
+                    placeholder="Brief reason..."
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -392,41 +559,58 @@ export default function BookAppointment() {
                 <div className="space-y-3">
                   <div className="flex justify-between py-2 border-b">
                     <span className="text-muted-foreground">Patient</span>
-                    <span className="font-medium">{selectedPatient?.name || '-'}</span>
+                    <span className="font-medium">
+                      {selectedPatient?.full_name || "-"}
+                    </span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="text-muted-foreground">Doctor</span>
                     <span className="font-medium">
-                      {doctors.find(d => d.id === selectedDoctor)?.name || '-'}
+                      {doctors.find((d) => d.id === selectedDoctor)
+                        ?.full_name || "-"}
                     </span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="text-muted-foreground">Date</span>
                     <span className="font-medium">
-                      {appointmentDate ? format(appointmentDate, 'dd MMM yyyy') : '-'}
+                      {appointmentDate
+                        ? format(appointmentDate, "dd MMM yyyy")
+                        : "-"}
                     </span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="text-muted-foreground">Time</span>
-                    <span className="font-medium">{selectedTime || '-'}</span>
+                    <span className="font-medium">{selectedTime || "-"}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="text-muted-foreground">Type</span>
-                    <span className="font-medium">{appointmentType || '-'}</span>
+                    <span className="font-medium">
+                      {appointmentType || "-"}
+                    </span>
                   </div>
                   <div className="flex justify-between py-2">
                     <span className="text-muted-foreground">Source</span>
-                    <span className="font-medium">{bookingSource || '-'}</span>
+                    <span className="font-medium">{bookingSource || "-"}</span>
                   </div>
                 </div>
 
-                <Button 
-                  className="w-full gap-2" 
+                <Button
+                  className="w-full gap-2"
                   size="lg"
                   onClick={handleBookAppointment}
+                  disabled={loading}
                 >
-                  <Plus className="w-4 h-4" />
-                  Book Appointment
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Booking...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      Book Appointment
+                    </>
+                  )}
                 </Button>
               </CardContent>
             </Card>

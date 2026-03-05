@@ -133,11 +133,6 @@ const clinicAdminNav: NavConfig = [
         href: "/appointments/book",
         icon: CalendarDays,
       },
-      {
-        label: "Calendar View",
-        href: "/appointments/calendar",
-        icon: CalendarClock,
-      },
     ],
   },
 
@@ -192,16 +187,6 @@ const doctorNav: NavConfig = [
     icon: Calendar,
     items: [
       {
-        label: "Today's Appointments",
-        href: "/appointments/today",
-        icon: CalendarCheck,
-      },
-      {
-        label: "Appointment Calendar",
-        href: "/appointments/calendar",
-        icon: CalendarClock,
-      },
-      {
         label: "All Appointments",
         href: "/appointments",
         icon: Calendar,
@@ -246,13 +231,6 @@ const receptionistNav: NavConfig = [
         href: "/appointments/book",
         icon: CalendarDays,
       },
-      { label: "Today", href: "/appointments/today", icon: CalendarCheck },
-      {
-        label: "Calendar",
-        href: "/appointments/calendar",
-        icon: CalendarClock,
-      },
-      { label: "Manage", href: "/appointments/manage", icon: CalendarX },
     ],
   },
 

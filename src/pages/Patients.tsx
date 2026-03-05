@@ -10,6 +10,7 @@ import {
   Download,
   Loader2,
 } from "lucide-react";
+
 import { PatientFilters } from "@/components/patients/PatientFilters";
 import { PatientTable } from "@/components/patients/PatientTable";
 import { AddPatientDialog } from "@/components/patients/AddPatientDialog";
@@ -26,6 +27,7 @@ import { LabReportsDialog } from "@/components/patients/LabReportsDialog";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
 import { MedicalHistory } from "@/types/patient";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ApiPatient {
   id: string;
@@ -81,7 +83,7 @@ export default function PatientsPage() {
   const [selectedBloodGroup, setSelectedBloodGroup] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-
+  const { role } = localStorage.getItem("role");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -131,7 +133,7 @@ export default function PatientsPage() {
       totalVisits: apiPatient.total_visits || 0,
     };
   };
-
+  console.log("user ", role);
   // Fetch patients from API
   const fetchPatients = async () => {
     setLoading(true);

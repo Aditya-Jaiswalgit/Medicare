@@ -11,6 +11,7 @@ interface AuthContextType {
   user: User | null;
   role: UserRole | null;
   isAuthenticated: boolean;
+  token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -21,6 +22,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -33,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (token && savedUser && savedRole) {
           setUser(JSON.parse(savedUser));
           setRole(savedRole as UserRole);
+          setToken(token); // ← add this
         }
       } catch (error) {
         console.error("Failed to restore auth state:", error);
@@ -105,13 +108,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       localStorage.removeItem("role");
-      window.location.href = "/login";
     }
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, role, isAuthenticated: !!user, isLoading, login, logout }}
+      value={{
+        user,
+        role,
+        token,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        logout,
+      }}
     >
       {children}
     </AuthContext.Provider>

@@ -1,12 +1,12 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SuperAdminDashboard } from "./SuperAdminDashboard";
-import { DoctorDashboard } from "./DoctorAdminDashboard";
-import { ClinicAdminDashboard } from "./ClinicAdminDashboard";
+import { DoctorDashboard } from "./doctor/DoctorAdminDashboard";
+import { ClinicAdminDashboard } from "./clinic/ClinicAdminDashboard";
 import { ReceptionistDashboard } from "./ReceptionistDashboard";
-import { PharmacistDashboard } from "./PharmacistDashboard";
+import { PharmacistDashboard } from "./pharmacy/PharmacistDashboard";
 import { AccountantDashboard } from "./AccountantDashboard";
-import { LabTechnicianDashboard } from "./LabTechnicianDashboard";
+import { LabTechnicianDashboard } from "./lab/LabTechnicianDashboard";
 import { PatientDashboard } from "./PatientDashboard";
 
 export default function Dashboard() {
