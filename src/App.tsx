@@ -39,6 +39,9 @@ import CreateClinic from "./components/users/CreateClinic";
 import Clinics from "./pages/Clinics";
 import YourAppointments from "./pages/YourAppointments";
 import YourBills from "./pages/YourBills";
+import SubscriptionsPage from "./pages/subscriptions";
+import SignupPage from "./pages/Signup";
+import SignInPage from "./pages/SignIn";
 
 const queryClient = new QueryClient();
 
@@ -419,6 +422,10 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      <Route path="/signin" element={<SignInPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+
+      <Route path="/billings" element={<SubscriptionsPage />} />
 
       {/* Catch-all route */}
       <Route path="*" element={<NotFound />} />

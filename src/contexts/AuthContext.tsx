@@ -75,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(user);
       setRole(user.role as UserRole);
       if (token) {
+        setToken(token);
         localStorage.setItem("token", token);
         localStorage.setItem("user", JSON.stringify(user));
         localStorage.setItem("role", user.role);
@@ -105,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setUser(null);
       setRole(null);
+      setToken(null);
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       localStorage.removeItem("role");

@@ -1,17 +1,17 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -19,20 +19,19 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   Receipt,
   Plus,
   Search,
   MoreVertical,
-  Edit,
   Printer,
   Eye,
   DollarSign,
@@ -41,109 +40,146 @@ import {
   CheckCircle,
   XCircle,
   User,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+  Loader2,
+  RefreshCw,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
-type PaymentStatus = 'Paid' | 'Unpaid' | 'Partial';
+type PaymentStatus = "paid" | "pending" | "partial";
 
-interface Invoice {
+interface MedicineBill {
   id: string;
-  invoice_number: string;
+  bill_number: string;
+  patient_id: string;
   patient_name: string;
-  date: string;
-  items: number;
+  patient_phone: string;
   total_amount: number;
-  paid_amount: number;
-  payment_status: PaymentStatus;
-  payment_method?: string;
+  status: PaymentStatus;
+  created_at: string;
 }
 
-const mockInvoices: Invoice[] = [
-  {
-    id: '1',
-    invoice_number: 'INV-2024-001',
-    patient_name: 'John Smith',
-    date: '2024-01-20',
-    items: 3,
-    total_amount: 250.00,
-    paid_amount: 250.00,
-    payment_status: 'Paid',
-    payment_method: 'Card',
-  },
-  {
-    id: '2',
-    invoice_number: 'INV-2024-002',
-    patient_name: 'Sarah Johnson',
-    date: '2024-01-20',
-    items: 5,
-    total_amount: 450.00,
-    paid_amount: 0,
-    payment_status: 'Unpaid',
-  },
-  {
-    id: '3',
-    invoice_number: 'INV-2024-003',
-    patient_name: 'Michael Brown',
-    date: '2024-01-19',
-    items: 2,
-    total_amount: 180.00,
-    paid_amount: 100.00,
-    payment_status: 'Partial',
-    payment_method: 'Cash',
-  },
-  {
-    id: '4',
-    invoice_number: 'INV-2024-004',
-    patient_name: 'Emily Davis',
-    date: '2024-01-19',
-    items: 4,
-    total_amount: 320.00,
-    paid_amount: 320.00,
-    payment_status: 'Paid',
-    payment_method: 'UPI',
-  },
-  {
-    id: '5',
-    invoice_number: 'INV-2024-005',
-    patient_name: 'Robert Wilson',
-    date: '2024-01-18',
-    items: 1,
-    total_amount: 500.00,
-    paid_amount: 0,
-    payment_status: 'Unpaid',
-  },
-];
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
 
-const statusConfig: Record<PaymentStatus, { icon: React.ElementType; color: string }> = {
-  Paid: {
+const statusConfig: Record<
+  string,
+  { icon: React.ElementType; color: string; label: string }
+> = {
+  paid: {
     icon: CheckCircle,
-    color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    color:
+      "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+    label: "Paid",
   },
-  Unpaid: {
+  pending: {
     icon: XCircle,
-    color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+    color: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
+    label: "Pending",
   },
-  Partial: {
+  partial: {
     icon: Clock,
-    color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    color:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    label: "Partial",
   },
 };
 
 export default function InvoicesPage() {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const { token, isLoading: authLoading } = useAuth();
 
-  const filteredInvoices = mockInvoices.filter((inv) => {
+  const [bills, setBills] = useState<MedicineBill[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+
+  useEffect(() => {
+    if (!authLoading && token) {
+      fetchBills();
+    }
+  }, [authLoading, token]);
+
+  const fetchBills = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        "http://localhost:5000/api/pharmacist/medicine-bills",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch bills");
+
+      const result: ApiResponse<MedicineBill[]> = await response.json();
+      if (result.success) {
+        setBills(Array.isArray(result.data) ? result.data : []);
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to load bills",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching bills:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load medicine bills",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredBills = bills.filter((bill) => {
     const matchesSearch =
-      inv.invoice_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      inv.patient_name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || inv.payment_status === selectedStatus;
+      bill.bill_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      bill.patient_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      bill.patient_phone?.includes(searchQuery);
+    const matchesStatus =
+      selectedStatus === "all" || bill.status === selectedStatus;
     return matchesSearch && matchesStatus;
   });
 
-  const totalRevenue = mockInvoices.reduce((sum, i) => sum + i.paid_amount, 0);
-  const pendingAmount = mockInvoices.reduce((sum, i) => sum + (i.total_amount - i.paid_amount), 0);
+  const totalCollected = bills.reduce(
+    (sum, b) =>
+      sum + (b.status === "paid" ? parseFloat(String(b.total_amount)) : 0),
+    0,
+  );
+  const totalPending = bills.reduce(
+    (sum, b) =>
+      sum + (b.status !== "paid" ? parseFloat(String(b.total_amount)) : 0),
+    0,
+  );
+  const paidCount = bills.filter((b) => b.status === "paid").length;
+
+  const getStatusConfig = (status: string) =>
+    statusConfig[status] ?? {
+      icon: Clock,
+      color: "bg-gray-100 text-gray-600",
+      label: status,
+    };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -153,14 +189,25 @@ export default function InvoicesPage() {
           <div>
             <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
               <Receipt className="w-6 h-6" />
-              Invoices
+              Medicine Bills
             </h1>
-            <p className="text-muted-foreground">Manage billing and invoices</p>
+            <p className="text-muted-foreground">
+              Manage medicine billing and invoices
+            </p>
           </div>
-          <Button className="gap-2" onClick={() => navigate('/billing/create')}>
-            <Plus className="w-4 h-4" />
-            Create Invoice
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={fetchBills} className="gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </Button>
+            <Button
+              className="gap-2"
+              onClick={() => navigate("/billing/create")}
+            >
+              <Plus className="w-4 h-4" />
+              Create Bill
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -172,8 +219,8 @@ export default function InvoicesPage() {
                   <Receipt className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{mockInvoices.length}</p>
-                  <p className="text-xs text-muted-foreground">Total Invoices</p>
+                  <p className="text-2xl font-bold">{bills.length}</p>
+                  <p className="text-xs text-muted-foreground">Total Bills</p>
                 </div>
               </div>
             </CardContent>
@@ -185,7 +232,9 @@ export default function InvoicesPage() {
                   <DollarSign className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">${totalRevenue.toFixed(0)}</p>
+                  <p className="text-2xl font-bold">
+                    ₹{totalCollected.toFixed(0)}
+                  </p>
                   <p className="text-xs text-muted-foreground">Collected</p>
                 </div>
               </div>
@@ -198,7 +247,9 @@ export default function InvoicesPage() {
                   <Clock className="w-5 h-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">${pendingAmount.toFixed(0)}</p>
+                  <p className="text-2xl font-bold">
+                    ₹{totalPending.toFixed(0)}
+                  </p>
                   <p className="text-xs text-muted-foreground">Pending</p>
                 </div>
               </div>
@@ -211,10 +262,8 @@ export default function InvoicesPage() {
                   <CreditCard className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">
-                    {mockInvoices.filter((i) => i.payment_status === 'Paid').length}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Paid Invoices</p>
+                  <p className="text-2xl font-bold">{paidCount}</p>
+                  <p className="text-xs text-muted-foreground">Paid Bills</p>
                 </div>
               </div>
             </CardContent>
@@ -228,7 +277,7 @@ export default function InvoicesPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by invoice number or patient..."
+                  placeholder="Search by bill number or patient name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -240,76 +289,86 @@ export default function InvoicesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="Paid">Paid</SelectItem>
-                  <SelectItem value="Unpaid">Unpaid</SelectItem>
-                  <SelectItem value="Partial">Partial</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="partial">Partial</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </CardContent>
         </Card>
 
-        {/* Invoices Table */}
+        {/* Bills Table */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <Receipt className="w-5 h-5" />
-              All Invoices ({filteredInvoices.length})
+              All Bills ({filteredBills.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border overflow-hidden">
+            <div className="rounded-lg border overflow-hidden overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead>Invoice</TableHead>
+                    <TableHead>Bill No.</TableHead>
                     <TableHead>Patient</TableHead>
                     <TableHead className="hidden md:table-cell">Date</TableHead>
-                    <TableHead className="hidden lg:table-cell">Amount</TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                      Amount
+                    </TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredInvoices.map((inv) => {
-                    const StatusIcon = statusConfig[inv.payment_status].icon;
+                  {filteredBills.map((bill) => {
+                    const config = getStatusConfig(bill.status);
+                    const StatusIcon = config.icon;
                     return (
-                      <TableRow key={inv.id} className="hover:bg-muted/50">
+                      <TableRow key={bill.id} className="hover:bg-muted/50">
                         <TableCell>
-                          <div>
-                            <p className="font-medium text-foreground">{inv.invoice_number}</p>
-                            <p className="text-xs text-muted-foreground">{inv.items} items</p>
-                          </div>
+                          <p className="font-medium text-foreground">
+                            {bill.bill_number}
+                          </p>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                               <User className="w-4 h-4 text-primary" />
                             </div>
-                            <span className="font-medium">{inv.patient_name}</span>
+                            <div>
+                              <p className="font-medium">{bill.patient_name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {bill.patient_phone}
+                              </p>
+                            </div>
                           </div>
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">{inv.date}</TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {bill.created_at
+                            ? format(new Date(bill.created_at), "dd MMM yyyy")
+                            : "-"}
+                        </TableCell>
                         <TableCell className="hidden lg:table-cell">
-                          <div>
-                            <p className="font-medium">${inv.total_amount.toFixed(2)}</p>
-                            {inv.payment_status === 'Partial' && (
-                              <p className="text-xs text-muted-foreground">
-                                Paid: ${inv.paid_amount.toFixed(2)}
-                              </p>
-                            )}
-                          </div>
+                          <p className="font-medium">
+                            ₹{parseFloat(String(bill.total_amount)).toFixed(2)}
+                          </p>
                         </TableCell>
                         <TableCell>
-                          <Badge className={cn('gap-1', statusConfig[inv.payment_status].color)}>
+                          <Badge className={cn("gap-1 border-0", config.color)}>
                             <StatusIcon className="w-3 h-3" />
-                            {inv.payment_status}
+                            {config.label}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                              >
                                 <MoreVertical className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -320,17 +379,17 @@ export default function InvoicesPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem className="gap-2">
                                 <Printer className="w-4 h-4" />
-                                Print Invoice
+                                Print Bill
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="gap-2">
-                                <CreditCard className="w-4 h-4" />
-                                Record Payment
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="gap-2">
-                                <Edit className="w-4 h-4" />
-                                Edit Invoice
-                              </DropdownMenuItem>
+                              {bill.status !== "paid" && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem className="gap-2 text-green-600">
+                                    <CreditCard className="w-4 h-4" />
+                                    Mark as Paid
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -341,10 +400,10 @@ export default function InvoicesPage() {
               </Table>
             </div>
 
-            {filteredInvoices.length === 0 && (
+            {filteredBills.length === 0 && (
               <div className="text-center py-12">
                 <Receipt className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-                <p className="text-muted-foreground">No invoices found</p>
+                <p className="text-muted-foreground">No bills found</p>
               </div>
             )}
           </CardContent>
