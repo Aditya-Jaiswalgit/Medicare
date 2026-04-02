@@ -200,10 +200,11 @@ export default function AllAppointments() {
   }, [appointments]);
 
   const fetchAppointments = async () => {
+    const role = localStorage.getItem("role");
     try {
       setLoading(true);
       const response = await fetch(
-        "http://localhost:5000/api/receptionist/appointments",
+        `http://localhost:5000/api/${role}/appointments`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

@@ -43,7 +43,227 @@ const prices = {
   annual: { starter: "0", pro: "2,399", enterprise: "6,399" },
 };
 
-// ── Sub-components ────────────────────────────────────────────────
+// ── Auth hooks ────────────────────────────────────────────────────
+function useCurrentUser() {
+  return {
+    isLoggedIn: true,
+    name: "Admin",
+    email: "admin@citycare.com",
+    plan: "free" as "free" | "professional" | "enterprise",
+    usage: {
+      patients: { used: 0, limit: 50 },
+      doctors: { used: 0, limit: 1 },
+    },
+  };
+}
+
+function useAuth() {
+  return {
+    isLoggedIn: true,
+    user: {
+      name: "Dr. Rahul Sharma",
+      email: "rahul@cityclinic.com",
+      initials: "RS",
+    },
+    plan: "free" as "free" | "professional" | "enterprise",
+  };
+}
+
+// ── Plan configuration ─────────────────────────────────────────────
+const PLAN_CONFIG = {
+  free: {
+    label: "Free plan",
+    badgeClass: "bg-[#f3f4f6] text-[#6b7a8d] border border-[#e4eaf0]",
+    dot: "bg-[#9ca3af]",
+    showUpgrade: true,
+  },
+  professional: {
+    label: "Professional",
+    badgeClass: "bg-[#d1fae5] text-[#065f46]",
+    dot: "bg-[#059669]",
+    showUpgrade: false,
+  },
+  enterprise: {
+    label: "Enterprise",
+    badgeClass: "bg-[#dbeafe] text-[#1e3a8a]",
+    dot: "bg-[#2563eb]",
+    showUpgrade: false,
+  },
+};
+
+// ── Components ─────────────────────────────────────────────────────
+
+function UsageBar({ used, limit }: { used: number; limit: number | null }) {
+  if (!limit)
+    return (
+      <span className="text-xs font-medium text-[#0f1923]">
+        {used.toLocaleString()}{" "}
+        <span className="text-[#9ca3af] font-normal">(unlimited)</span>
+      </span>
+    );
+  const pct = Math.min(Math.round((used / limit) * 100), 100);
+  const fillColor =
+    pct >= 100 ? "bg-red-500" : pct >= 70 ? "bg-amber-500" : "bg-[#059669]";
+  return (
+    <div className="w-full">
+      <div className="flex justify-between mb-1">
+        <span className="text-xs text-[#6b7a8d]">
+          {used} / {limit}
+        </span>
+        <span className="text-xs text-[#6b7a8d]">{pct}%</span>
+      </div>
+      <div className="w-full h-1 bg-[#e4eaf0] rounded-full">
+        <div
+          className={`h-full rounded-full ${fillColor}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ProfileMenu() {
+  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  const user = useCurrentUser();
+  const plan = PLAN_CONFIG[user.plan];
+
+  if (!user.isLoggedIn) return null;
+
+  const initials = user.name
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("");
+
+  return (
+    <div className="relative flex items-center gap-3">
+      {/* Plan badge */}
+      <span
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium ${plan.badgeClass}`}
+      >
+        <span className={`w-1.5 h-1.5 rounded-full ${plan.dot}`} />
+        {plan.label}
+      </span>
+
+      {/* Upgrade button */}
+      {plan.showUpgrade && (
+        <button
+          onClick={() => {
+            document
+              .getElementById("pricing")
+              ?.scrollIntoView({ behavior: "smooth" });
+          }}
+          className="px-3 py-1.5 rounded-lg bg-[#059669] text-white text-[12px] font-medium border-none cursor-pointer hover:bg-[#047857] transition-colors"
+        >
+          Upgrade
+        </button>
+      )}
+
+      {/* Avatar button */}
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-[34px] h-[34px] rounded-full bg-[#d1fae5] text-[#065f46] text-[12px] font-medium border border-[#e4eaf0] flex items-center justify-center cursor-pointer hover:border-[#059669] transition-colors"
+      >
+        {initials}
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute top-[calc(100%+10px)] right-0 w-[280px] bg-white border border-[#e4eaf0] rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.1)] z-50 overflow-hidden">
+          {/* User info */}
+          <div className="flex items-center gap-2.5 px-4 py-3.5 border-b border-[#e4eaf0]">
+            <div className="w-9 h-9 rounded-full bg-[#d1fae5] text-[#065f46] text-[13px] font-medium flex items-center justify-center shrink-0">
+              {initials}
+            </div>
+            <div>
+              <div className="text-[14px] font-semibold text-[#0f1923]">
+                {user.name}
+              </div>
+              <div className="text-[12px] text-[#6b7a8d]">{user.email}</div>
+            </div>
+          </div>
+
+          {/* Subscription */}
+          <div className="px-4 py-3 border-b border-[#e4eaf0]">
+            <div className="text-[11px] uppercase tracking-[0.6px] text-[#9ca3af] mb-2">
+              Active subscription
+            </div>
+            <div className="bg-[#f8fafb] rounded-xl p-3">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-[13px] font-medium text-[#0f1923] flex items-center gap-1.5">
+                  <span className={`w-1.5 h-1.5 rounded-full ${plan.dot}`} />
+                  {plan.label}
+                </span>
+                {plan.showUpgrade && (
+                  <button
+                    onClick={() => {
+                      setOpen(false);
+                      document
+                        .getElementById("pricing")
+                        ?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="text-[12px] text-[#059669] font-medium bg-none border-none cursor-pointer p-0"
+                  >
+                    Upgrade →
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col gap-2.5">
+                <div>
+                  <div className="text-[12px] text-[#6b7a8d] mb-1">
+                    Patients
+                  </div>
+                  <UsageBar
+                    used={user.usage.patients.used}
+                    limit={user.usage.patients.limit}
+                  />
+                </div>
+                <div>
+                  <div className="text-[12px] text-[#6b7a8d] mb-1">Doctors</div>
+                  <UsageBar
+                    used={user.usage.doctors.used}
+                    limit={user.usage.doctors.limit}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Menu items */}
+          <div className="py-1.5">
+            {[
+              { label: "Profile settings", path: "/profile" },
+              { label: "Change password", path: "/change-password" },
+              { label: "Setup clinic", path: "/setup-clinic" },
+            ].map(({ label, path }) => (
+              <button
+                key={path}
+                onClick={() => {
+                  setOpen(false);
+                  navigate(path);
+                }}
+                className="w-full text-left px-4 py-2 text-[13px] text-[#0f1923] hover:bg-[#f8fafb] border-none bg-transparent cursor-pointer transition-colors"
+              >
+                {label}
+              </button>
+            ))}
+            <div className="h-px bg-[#e4eaf0] my-1" />
+            <button
+              onClick={() => {
+                setOpen(false);
+                navigate("/login");
+              }}
+              className="w-full text-left px-4 py-2 text-[13px] text-red-600 hover:bg-red-50 border-none bg-transparent cursor-pointer transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Navbar() {
   const handleScroll = (id: string) => {
@@ -53,6 +273,8 @@ function Navbar() {
     }
   };
   const navigate = useNavigate();
+  const user = useCurrentUser();
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-15 py-[18px] bg-white/90 backdrop-blur-xl border-b border-[#e4eaf0]">
       <div className="flex items-center gap-2.5">
@@ -95,12 +317,16 @@ function Navbar() {
         >
           About
         </button>
-        <button
-          onClick={() => navigate("/signin")}
-          className="px-[22px] py-[9px] border-[1.5px] border-[#e4eaf0] rounded-[10px] bg-transparent text-sm font-medium text-[#0f1923] cursor-pointer transition-all hover:border-[#059669] hover:text-[#059669]"
-        >
-          Login
-        </button>
+        {user.isLoggedIn ? (
+          <ProfileMenu />
+        ) : (
+          <button
+            onClick={() => navigate("/login")}
+            className="px-4 py-2 bg-[#059669] text-white rounded-lg text-sm font-medium border-none cursor-pointer hover:bg-[#047857] transition-colors"
+          >
+            Login
+          </button>
+        )}
       </div>
     </nav>
   );
@@ -241,7 +467,7 @@ function HeroSection() {
               >
                 Today's Overview
               </div>
-              <div className="text-xs text-[#6b7a8d]">April 1, 2026</div>
+              <div className="text-xs text-[#6b7a8d]">April 2, 2026</div>
             </div>
 
             <div className="grid grid-cols-3 gap-3 mb-5">
@@ -330,9 +556,7 @@ function HeroSection() {
             style={{ animation: "float2 5s ease-in-out infinite" }}
           >
             <div className="w-7 h-7 rounded-lg bg-[#d1fae5] flex items-center justify-center text-[#059669]">
-              <svg {...iconProps} className="w-3.5 h-3.5">
-                <polyline points="20,6 9,17 4,12" />
-              </svg>
+              <CheckIcon />
             </div>
             <div>
               <div
@@ -715,7 +939,7 @@ function Footer() {
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────
+// ── Main Page ──────────────────────────────────────────────────────
 export default function MediCarePage() {
   return (
     <>

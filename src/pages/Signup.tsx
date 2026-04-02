@@ -280,7 +280,7 @@ function SignupForm() {
   };
 
   return (
-    <div className="flex flex-col justify-start px-12 bg-[#f8fafb] min-h-screen overflow-y-auto pt-10">
+    <div className="flex flex-col justify-center px-12 bg-[#f8fafb] min-h-screen overflow-y-auto py-10">
       <div className="max-w-[440px] w-full mx-auto">
         {/* Header */}
         <div className="mb-9">
