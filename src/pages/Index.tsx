@@ -254,9 +254,9 @@ function ProfileMenu() {
                 setOpen(false);
                 navigate("/login");
               }}
-              className="w-full text-left px-4 py-2 text-[13px] text-red-600 hover:bg-red-50 border-none bg-transparent cursor-pointer transition-colors"
+              className="w-full text-left px-4 py-2 text-[13px] text-blue-600 hover:bg-red-50 border-none bg-transparent cursor-pointer transition-colors"
             >
-              Sign out
+              Login In System
             </button>
           </div>
         </div>

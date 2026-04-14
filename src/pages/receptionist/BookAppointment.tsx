@@ -64,7 +64,7 @@ export default function BookAppointment() {
   const [loading, setLoading] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-
+  const role = localStorage.getItem("role");
   // Form state
   const [patientSearch, setPatientSearch] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -94,7 +94,7 @@ export default function BookAppointment() {
   const fetchPatients = async () => {
     try {
       const response = await fetch(
-        "http://localhost:5000/api/receptionist/patients",
+        `http://localhost:5000/api/${role}/patients`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -121,7 +121,7 @@ export default function BookAppointment() {
   const fetchDoctors = async () => {
     try {
       const response = await fetch(
-        "http://localhost:5000/api/receptionist/doctors",
+        `http://localhost:5000/api/${role}/doctors`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -226,7 +226,7 @@ export default function BookAppointment() {
       };
 
       const response = await fetch(
-        "http://localhost:5000/api/receptionist/appointments",
+        `http://localhost:5000/api/${role}/appointments`,
         {
           method: "POST",
           headers: {

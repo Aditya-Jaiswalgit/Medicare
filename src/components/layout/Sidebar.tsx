@@ -153,8 +153,6 @@ const clinicAdminNav: NavConfig = [
     items: [
       { label: "Create Invoice", href: "/billing/create", icon: FilePlus },
       { label: "Invoices", href: "/billing/invoices", icon: Receipt },
-      { label: "Payments", href: "/billing/payments", icon: Banknote },
-      { label: "Pending", href: "/billing/pending", icon: Clock },
     ],
   },
 
@@ -185,30 +183,21 @@ const doctorNav: NavConfig = [
   {
     label: "My Appointments",
     icon: Calendar,
-    items: [
-      {
-        label: "All Appointments",
-        href: "/appointments",
-        icon: Calendar,
-      },
-    ],
+    href: "/appointments",
   },
 
   // Patients
   {
     label: "My Patients",
     icon: Users,
-    items: [
-      { label: "Patient List", href: "/patients", icon: Users },
-      { label: "Search Patient", href: "/patients/search", icon: Search },
-    ],
+    href: "/patients",
   },
 
   // Reports
   {
     label: "Reports",
     icon: BarChart3,
-    items: [{ label: "Reports Overview", href: "/reports", icon: BarChart3 }],
+    href: "/reports",
   },
 ];
 

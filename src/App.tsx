@@ -42,6 +42,7 @@ import YourBills from "./pages/YourBills";
 import SubscriptionsPage from "./pages/subscriptions";
 import SignupPage from "./pages/Signup";
 import SignInPage from "./pages/SignIn";
+import MyPatients from "./pages/doctor/MyPatients";
 
 const queryClient = new QueryClient();
 
@@ -123,6 +124,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Doctors />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/mypatients"
+        element={
+          <ProtectedRoute>
+            <MyPatients />
           </ProtectedRoute>
         }
       />

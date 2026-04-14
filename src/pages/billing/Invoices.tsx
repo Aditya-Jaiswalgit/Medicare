@@ -93,7 +93,7 @@ const statusConfig: Record<
 export default function InvoicesPage() {
   const navigate = useNavigate();
   const { token, isLoading: authLoading } = useAuth();
-
+  const role = localStorage.getItem("role");
   const [bills, setBills] = useState<MedicineBill[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -109,7 +109,7 @@ export default function InvoicesPage() {
     try {
       setLoading(true);
       const response = await fetch(
-        "http://localhost:5000/api/pharmacist/medicine-bills",
+        `http://localhost:5000/api/${role}/medicine-bills`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

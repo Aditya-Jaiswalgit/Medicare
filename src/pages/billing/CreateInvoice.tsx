@@ -108,6 +108,7 @@ const paymentModeIcons: Record<PaymentMode, React.ElementType> = {
 
 export default function CreateInvoicePage() {
   const navigate = useNavigate();
+  const role = localStorage.getItem("role");
   const { token, isLoading: authLoading } = useAuth();
 
   // Data from API
@@ -146,7 +147,7 @@ export default function CreateInvoicePage() {
   const fetchPatients = async () => {
     try {
       const response = await fetch(
-        "http://localhost:5000/api/pharmacist/patients",
+        `http://localhost:5000/api/${role}/patients`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -168,7 +169,7 @@ export default function CreateInvoicePage() {
   const fetchMedicines = async () => {
     try {
       const response = await fetch(
-        "http://localhost:5000/api/pharmacist/medicines",
+        `http://localhost:5000/api/${role}/medicines`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -324,7 +325,7 @@ export default function CreateInvoicePage() {
       };
 
       const response = await fetch(
-        "http://localhost:5000/api/pharmacist/medicine-bills",
+        `http://localhost:5000/api/${role}/medicine-bills`,
         {
           method: "POST",
           headers: {
@@ -335,7 +336,7 @@ export default function CreateInvoicePage() {
         },
       );
 
-      const result: ApiResponse<any> = await response.json();
+      const result: ApiResponse<unknown> = await response.json();
 
       if (!response.ok) {
         throw new Error(result.message || "Failed to create bill");
@@ -348,7 +349,7 @@ export default function CreateInvoicePage() {
         });
         navigate("/billing/invoices");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error creating bill:", error);
       toast({
         title: "Error",

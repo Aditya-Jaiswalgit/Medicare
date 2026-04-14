@@ -104,6 +104,7 @@ const defaultFormData = {
 
 export default function PharmacyMedicinesPage() {
   const { token, isLoading: authLoading } = useAuth();
+  const role = localStorage.getItem("role");
 
   // State
   const [medicines, setMedicines] = useState<Medicine[]>([]);
@@ -152,7 +153,7 @@ export default function PharmacyMedicinesPage() {
     if (!token) return;
     setLoading((prev) => ({ ...prev, medicines: true }));
     try {
-      const url = new URL(`${API_BASE}/api/pharmacist/medicines`);
+      const url = new URL(`${API_BASE}/api/${role}/medicines`);
       if (searchQuery) url.searchParams.append("search", searchQuery);
       if (showLowStock) url.searchParams.append("low_stock", "true");
 
@@ -193,7 +194,7 @@ export default function PharmacyMedicinesPage() {
     if (!token) return;
     setLoading((prev) => ({ ...prev, stats: true }));
     try {
-      const response = await fetch(`${API_BASE}/api/pharmacist/dashboard`, {
+      const response = await fetch(`${API_BASE}/api/${role}/dashboard`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -283,7 +284,7 @@ export default function PharmacyMedicinesPage() {
         batch_number: formData.batch_number,
       };
 
-      const response = await fetch(`${API_BASE}/api/pharmacist/medicines`, {
+      const response = await fetch(`${API_BASE}/api/${role}/medicines`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -334,7 +335,7 @@ export default function PharmacyMedicinesPage() {
       };
 
       const response = await fetch(
-        `${API_BASE}/api/pharmacist/medicines/${selectedMedicine.id}`,
+        `${API_BASE}/api/${role}/medicines/${selectedMedicine.id}`,
         {
           method: "PUT",
           headers: {
@@ -388,7 +389,7 @@ export default function PharmacyMedicinesPage() {
       setLoading((prev) => ({ ...prev, action: true }));
 
       const response = await fetch(
-        `${API_BASE}/api/pharmacist/medicines/${selectedMedicine.id}`,
+        `${API_BASE}/api/${role}/medicines/${selectedMedicine.id}`,
         {
           method: "PUT",
           headers: {

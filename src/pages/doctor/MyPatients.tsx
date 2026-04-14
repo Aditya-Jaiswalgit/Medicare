@@ -4,18 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Users,
-  UserPlus,
   Activity,
   Calendar,
   Download,
   Loader2,
+  Stethoscope,
 } from "lucide-react";
 
 import { PatientFilters } from "@/components/patients/PatientFilters";
 import { PatientTable } from "@/components/patients/PatientTable";
-import { AddPatientDialog } from "@/components/patients/AddPatientDialog";
 import { PatientDetailsDialog } from "@/components/patients/PatientDetailsDialog";
-import { DeletePatientDialog } from "@/components/patients/DeletePatientDialog";
 import { MedicalHistoryDialog } from "@/components/patients/MedicalHistoryDialog";
 import {
   BookAppointmentDialog,
@@ -28,6 +26,9 @@ import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
 import { MedicalHistory } from "@/types/patient";
 import { useAuth } from "@/contexts/AuthContext";
+
+const ROLE = "doctor"; // hardcoded — this page is doctor-only
+const BASE_URL = "http://localhost:5000/api";
 
 interface ApiPatient {
   id: string;
@@ -75,152 +76,122 @@ interface PatientForTable {
   totalVisits: number;
 }
 
-export default function PatientsPage() {
+const transformPatient = (apiPatient: ApiPatient): PatientForTable => {
+  const nameParts = apiPatient.full_name.split(" ");
+  return {
+    id: apiPatient.id,
+    patientCode: `PT-${apiPatient.id.slice(0, 8)}`,
+    firstName: nameParts[0] || "",
+    lastName: nameParts.slice(1).join(" ") || "",
+    email: apiPatient.email,
+    phone: apiPatient.phone,
+    dateOfBirth: apiPatient.date_of_birth || "",
+    gender: "Not specified",
+    bloodGroup: apiPatient.blood_group || "",
+    address: apiPatient.address || "",
+    emergencyContact: apiPatient.emergency_contact || "",
+    status: apiPatient.is_active ? "Active" : "Inactive",
+    registrationDate: new Date(apiPatient.created_at).toLocaleDateString(),
+    lastVisit: apiPatient.last_visit
+      ? new Date(apiPatient.last_visit).toLocaleDateString()
+      : "",
+    totalVisits: apiPatient.total_visits || 0,
+  };
+};
+
+export default function MyPatients() {
+  const { token } = useAuth();
+
   const [patients, setPatients] = useState<ApiPatient[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedGender, setSelectedGender] = useState("all");
   const [selectedBloodGroup, setSelectedBloodGroup] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
-  // Get role from localStorage with fallback
-  const role = localStorage.getItem("role") || "doctor";
-
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  // Dialogs
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [medicalHistoryDialogOpen, setMedicalHistoryDialogOpen] =
     useState(false);
   const [appointmentDialogOpen, setAppointmentDialogOpen] = useState(false);
   const [consultationDialogOpen, setConsultationDialogOpen] = useState(false);
   const [prescriptionDialogOpen, setPrescriptionDialogOpen] = useState(false);
   const [labReportsDialogOpen, setLabReportsDialogOpen] = useState(false);
+
   const [selectedPatient, setSelectedPatient] =
     useState<PatientForTable | null>(null);
-  const [editPatient, setEditPatient] = useState<PatientForTable | null>(null);
   const [medicalHistoryData, setMedicalHistoryData] = useState<
     Record<string, MedicalHistory>
   >({});
 
-  const [pagination, setPagination] = useState({
-    total: 0,
-    page: 1,
-    limit: 100,
-    pages: 1,
-  });
-
-  // Transform API patient to table format
-  const transformPatient = (apiPatient: ApiPatient): PatientForTable => {
-    const nameParts = apiPatient.full_name.split(" ");
-    const firstName = nameParts[0] || "";
-    const lastName = nameParts.slice(1).join(" ") || "";
-
-    return {
-      id: apiPatient.id,
-      patientCode: `PT-${apiPatient.id.slice(0, 8)}`,
-      firstName,
-      lastName,
-      email: apiPatient.email,
-      phone: apiPatient.phone,
-      dateOfBirth: apiPatient.date_of_birth || "",
-      gender: "Not specified", // Not in API response
-      bloodGroup: apiPatient.blood_group || "",
-      address: apiPatient.address || "",
-      emergencyContact: apiPatient.emergency_contact || "",
-      status: apiPatient.is_active ? "Active" : "Inactive",
-      registrationDate: new Date(apiPatient.created_at).toLocaleDateString(),
-      lastVisit: apiPatient.last_visit
-        ? new Date(apiPatient.last_visit).toLocaleDateString()
-        : "",
-      totalVisits: apiPatient.total_visits || 0,
-    };
-  };
-
-  // Fetch patients from API
+  // ── Fetch only this doctor's patients ──────────────────────────
   const fetchPatients = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-
-      // Validate token and role
-      if (!token) {
-        toast.error("Authentication required");
-        setLoading(false);
-        return;
-      }
-
-      const params = new URLSearchParams({
-        page: "1",
-        limit: "100",
-      });
-
-      if (selectedStatus !== "all") {
-        params.append("status", selectedStatus);
-      }
-      if (selectedBloodGroup !== "all") {
+      const params = new URLSearchParams({ page: "1", limit: "100" });
+      if (selectedStatus !== "all") params.append("status", selectedStatus);
+      if (selectedBloodGroup !== "all")
         params.append("blood_group", selectedBloodGroup);
-      }
-      if (searchQuery) {
-        params.append("search", searchQuery);
-      }
+      if (searchQuery) params.append("search", searchQuery);
 
-      const apiUrl = `http://localhost:5000/api/${role}/patients?${params}`;
-
-      const response = await fetch(apiUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${BASE_URL}/${ROLE}/patients?${params.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          toast.error("Unauthorized. Please log in again.");
-          localStorage.clear();
-          window.location.href = "/login";
-          return;
-        }
-        throw new Error(`HTTP Error: ${response.status}`);
-      }
+      if (!response.ok) throw new Error("Failed to fetch patients");
 
       const result: ApiResponse = await response.json();
-
-      if (result.success) {
-        setPatients(result.data);
-        setPagination(result.pagination);
-      } else {
-        toast.error("Failed to load patients");
-      }
+      if (result.success) setPatients(result.data);
+      else toast.error("Failed to load patients");
     } catch (error) {
       console.error("Error fetching patients:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to load patients",
-      );
+      toast.error("Failed to load patients");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPatients();
-  }, [selectedStatus, selectedBloodGroup, role]);
+    if (token) fetchPatients();
+  }, [token, selectedStatus, selectedBloodGroup]);
 
-  // Apply frontend filters and transform data
+  // ── Frontend filter + transform ─────────────────────────────────
   const filteredPatients = useMemo(() => {
-    const filtered = patients.filter((patient) => {
-      const searchLower = searchQuery.toLowerCase();
-      const matchesSearch =
-        patient.full_name.toLowerCase().includes(searchLower) ||
-        patient.email.toLowerCase().includes(searchLower) ||
-        patient.phone.includes(searchQuery);
-
-      return matchesSearch;
-    });
-
-    return filtered.map(transformPatient);
+    return patients
+      .filter((p) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          p.full_name.toLowerCase().includes(q) ||
+          p.email.toLowerCase().includes(q) ||
+          p.phone.includes(searchQuery)
+        );
+      })
+      .map(transformPatient);
   }, [patients, searchQuery]);
 
+  // ── Stats ───────────────────────────────────────────────────────
+  const activeCount = patients.filter((p) => p.is_active).length;
+  const todayVisits = patients.filter((p) => {
+    if (!p.last_visit) return false;
+    return new Date(p.last_visit).toDateString() === new Date().toDateString();
+  }).length;
+  const thisWeekNew = patients.filter((p) => {
+    const created = new Date(p.created_at);
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return created >= weekAgo;
+  }).length;
+
+  // ── Handlers ────────────────────────────────────────────────────
   const handleClearFilters = () => {
     setSearchQuery("");
     setSelectedGender("all");
@@ -229,76 +200,18 @@ export default function PatientsPage() {
     setDateRange(undefined);
   };
 
-  const handleAddPatient = (data: {
-    firstName: string;
-    lastName?: string;
-    email: string;
-    phone: string;
-    dateOfBirth?: Date;
-    gender?: string;
-    bloodGroup?: string;
-    address?: string;
-    emergencyContact?: string;
-    registrationDate?: Date;
-  }) => {
-    // In real implementation, this would call the API
-    // For now, just refresh the list
-    toast.success("Patient added successfully");
-    setAddDialogOpen(false);
-    fetchPatients();
-  };
-
-  const handleStatusChange = async (
-    patient: PatientForTable,
-    newStatus: "Active" | "Inactive",
-  ) => {
-    try {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        toast.error("Authentication required");
-        return;
-      }
-
-      const response = await fetch(
-        `http://localhost:5000/api/${role}/patients/${patient.id}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            is_active: newStatus === "Active",
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to update status");
-      }
-
-      toast.success(`Patient status updated to ${newStatus}`);
-      fetchPatients();
-    } catch (error) {
-      console.error("Error updating status:", error);
-      toast.error("Failed to update status");
-    }
-  };
-
   const handleViewPatient = (patient: PatientForTable) => {
     setSelectedPatient(patient);
     setDetailsDialogOpen(true);
   };
 
-  const handleEditPatient = (patient: PatientForTable) => {
-    setEditPatient(patient);
-    setAddDialogOpen(true);
+  // Doctor cannot edit/delete patients — no-ops with toast
+  const handleEditPatient = (_patient: PatientForTable) => {
+    toast.error("Doctors cannot edit patient records. Contact clinic admin.");
   };
 
-  const handleDeletePatient = (patient: PatientForTable) => {
-    setSelectedPatient(patient);
-    setDeleteDialogOpen(true);
+  const handleDeletePatient = (_patient: PatientForTable) => {
+    toast.error("Doctors cannot delete patients. Contact clinic admin.");
   };
 
   const handleMedicalHistory = (patient: PatientForTable) => {
@@ -336,28 +249,16 @@ export default function PatientsPage() {
 
   const handleConfirmBooking = async (appointmentData: AppointmentFormData) => {
     try {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        toast.error("Authentication required");
-        return;
-      }
-
-      const response = await fetch(
-        `http://localhost:5000/api/${role}/appointments`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(appointmentData),
+      const response = await fetch(`${BASE_URL}/${ROLE}/appointments`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify(appointmentData),
+      });
 
-      if (!response.ok) {
-        throw new Error("Failed to create appointment");
-      }
+      if (!response.ok) throw new Error("Failed to create appointment");
 
       toast.success("Appointment booked successfully");
       setAppointmentDialogOpen(false);
@@ -367,21 +268,50 @@ export default function PatientsPage() {
     }
   };
 
-  const confirmDelete = async () => {
-    if (selectedPatient) {
-      await handleStatusChange(selectedPatient, "Inactive");
-      setDeleteDialogOpen(false);
-      setSelectedPatient(null);
-    }
+  // Doctor "status change" is read-only — block it
+  const handleStatusChange = (
+    _patient: PatientForTable,
+    _status: "Active" | "Inactive",
+  ) => {
+    toast.error("Doctors cannot change patient status. Contact clinic admin.");
   };
 
   const handleExport = () => {
-    toast.success("Export started", {
-      description: "Patient data is being exported to Excel.",
-    });
-  };
+    if (filteredPatients.length === 0) return;
 
-  const activeCount = patients.filter((p) => p.is_active).length;
+    const headers = [
+      "Patient Code",
+      "Name",
+      "Email",
+      "Phone",
+      "Blood Group",
+      "Last Visit",
+      "Total Visits",
+      "Status",
+    ];
+    const rows = filteredPatients.map((p) => [
+      p.patientCode,
+      `${p.firstName} ${p.lastName}`,
+      p.email,
+      p.phone,
+      p.bloodGroup || "-",
+      p.lastVisit || "-",
+      p.totalVisits,
+      p.status,
+    ]);
+
+    const csv = [headers, ...rows]
+      .map((r) => r.map((v) => `"${v}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `my-patients-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    toast.success("Exported successfully");
+  };
 
   return (
     <DashboardLayout>
@@ -390,27 +320,30 @@ export default function PatientsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <Users className="w-6 h-6" />
-              Patient Management
+              <Stethoscope className="w-6 h-6" />
+              My Patients
             </h1>
             <p className="text-muted-foreground">
-              Manage patient records and medical history
+              Patients assigned to you through appointments
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleExport} className="gap-2">
-              <Download className="w-4 h-4" />
-              Export
-            </Button>
             <Button
-              onClick={() => {
-                setEditPatient(null);
-                setAddDialogOpen(true);
-              }}
+              variant="outline"
+              onClick={() => fetchPatients()}
               className="gap-2"
             >
-              <UserPlus className="w-4 h-4" />
-              Add Patient
+              <Activity className="w-4 h-4" />
+              Refresh
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleExport}
+              disabled={filteredPatients.length === 0}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Export
             </Button>
           </div>
         </div>
@@ -425,9 +358,7 @@ export default function PatientsPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{patients.length}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Total Patients
-                  </p>
+                  <p className="text-xs text-muted-foreground">My Patients</p>
                 </div>
               </div>
             </CardContent>
@@ -452,10 +383,8 @@ export default function PatientsPage() {
                   <Calendar className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">24</p>
-                  <p className="text-xs text-muted-foreground">
-                    Today's Visits
-                  </p>
+                  <p className="text-2xl font-bold">{todayVisits}</p>
+                  <p className="text-xs text-muted-foreground">Visited Today</p>
                 </div>
               </div>
             </CardContent>
@@ -464,10 +393,10 @@ export default function PatientsPage() {
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center">
-                  <UserPlus className="w-5 h-5 text-warning" />
+                  <Stethoscope className="w-5 h-5 text-warning" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">8</p>
+                  <p className="text-2xl font-bold">{thisWeekNew}</p>
                   <p className="text-xs text-muted-foreground">New This Week</p>
                 </div>
               </div>
@@ -507,10 +436,6 @@ export default function PatientsPage() {
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
               </div>
-            ) : filteredPatients.length === 0 ? (
-              <div className="flex items-center justify-center py-12">
-                <p className="text-muted-foreground">No patients found</p>
-              </div>
             ) : (
               <PatientTable
                 patients={filteredPatients}
@@ -529,34 +454,12 @@ export default function PatientsPage() {
         </Card>
       </div>
 
-      {/* Dialogs */}
-      <AddPatientDialog
-        open={addDialogOpen}
-        onOpenChange={setAddDialogOpen}
-        onSubmit={handleAddPatient}
-        editData={
-          editPatient
-            ? {
-                ...editPatient,
-                dateOfBirth: editPatient.dateOfBirth
-                  ? new Date(editPatient.dateOfBirth)
-                  : undefined,
-                registrationDate: new Date(editPatient.registrationDate),
-              }
-            : null
-        }
-      />
+      {/* Dialogs — no Add/Delete dialogs since doctor is read-only for patient mgmt */}
       <PatientDetailsDialog
         open={detailsDialogOpen}
         onOpenChange={setDetailsDialogOpen}
         patient={selectedPatient}
         onEdit={handleEditPatient}
-      />
-      <DeletePatientDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        patient={selectedPatient}
-        onConfirm={confirmDelete}
       />
       <MedicalHistoryDialog
         open={medicalHistoryDialogOpen}

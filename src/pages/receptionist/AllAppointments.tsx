@@ -48,6 +48,7 @@ import {
   Search,
   MoreVertical,
   Clock,
+  Trash2,
   User,
   Stethoscope,
   CheckCircle,
@@ -140,13 +141,19 @@ const statusConfig: Record<
     bgColor: "bg-gray-100 dark:bg-gray-900/30",
     label: "No Show",
   },
+  rejected: {
+    icon: XCircle,
+    color: "text-red-700 dark:text-red-400",
+    bgColor: "bg-red-100 dark:bg-red-900/30",
+    label: "Rejected",
+  },
 };
 
 export default function AllAppointments() {
   const { user, token, isLoading: authLoading } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const role = localStorage.getItem("role");
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -200,7 +207,6 @@ export default function AllAppointments() {
   }, [appointments]);
 
   const fetchAppointments = async () => {
-    const role = localStorage.getItem("role");
     try {
       setLoading(true);
       const response = await fetch(
@@ -245,7 +251,7 @@ export default function AllAppointments() {
     try {
       setActionLoading(true);
       const response = await fetch(
-        `http://localhost:5000/api/receptionist/appointments/${appointmentId}/status`,
+        `http://localhost:5000/api/${role}/appointments/${appointmentId}/status`,
         {
           method: "PUT",
           headers: {
@@ -293,7 +299,7 @@ export default function AllAppointments() {
     try {
       setActionLoading(true);
       const response = await fetch(
-        `http://localhost:5000/api/receptionist/appointments/${selectedAppointment.id}/reschedule`,
+        `http://localhost:5000/api/${role}/appointments/${selectedAppointment.id}/reschedule`,
         {
           method: "PUT",
           headers: {
@@ -341,7 +347,7 @@ export default function AllAppointments() {
     try {
       setActionLoading(true);
       const response = await fetch(
-        `http://localhost:5000/api/receptionist/appointments/${selectedAppointment.id}/cancel`,
+        `http://localhost:5000/api/${role}/appointments/${selectedAppointment.id}/cancel`,
         {
           method: "PUT",
           headers: {
@@ -374,6 +380,42 @@ export default function AllAppointments() {
       toast({
         title: "Error",
         description: "Failed to cancel appointment",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const deleteAppointment = async (appointmentId: string) => {
+    try {
+      setActionLoading(true);
+      const response = await fetch(
+        `http://localhost:5000/api/${role}/appointments/${appointmentId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast({
+          title: "Error",
+          description: result.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Remove from local state immediately
+      setAppointments((prev) => prev.filter((apt) => apt.id !== appointmentId));
+      toast({ title: "Success", description: "Appointment deleted" });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete appointment",
         variant: "destructive",
       });
     } finally {
@@ -829,6 +871,41 @@ export default function AllAppointments() {
                                 View Details
                               </DropdownMenuItem>
 
+                              {/* ── Accept / Reject — doctor only, pending only ── */}
+                              {role === "doctor" &&
+                                apt.status === "pending" && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      className="gap-2 text-green-600 focus:text-green-600 focus:bg-green-50"
+                                      onClick={() =>
+                                        updateAppointmentStatus(
+                                          apt.id,
+                                          "approved",
+                                        )
+                                      }
+                                      disabled={actionLoading}
+                                    >
+                                      <CheckCircle className="w-4 h-4" />
+                                      Accept Appointment
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="gap-2 text-red-600 focus:text-red-600 focus:bg-red-50"
+                                      onClick={() =>
+                                        updateAppointmentStatus(
+                                          apt.id,
+                                          "rejected",
+                                        )
+                                      }
+                                      disabled={actionLoading}
+                                    >
+                                      <XCircle className="w-4 h-4" />
+                                      Reject Appointment
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                  </>
+                                )}
+
                               {(apt.status === "pending" ||
                                 apt.status === "approved") && (
                                 <>
@@ -840,34 +917,22 @@ export default function AllAppointments() {
                                     Reschedule
                                   </DropdownMenuItem>
 
-                                  {user?.role === "doctor" && (
-                                    <>
+                                  {role === "doctor" &&
+                                    apt.status === "approved" && (
                                       <DropdownMenuItem
-                                        className="gap-2 text-green-600"
+                                        className="gap-2 text-green-600 focus:text-green-600"
                                         onClick={() =>
                                           updateAppointmentStatus(
                                             apt.id,
                                             "completed",
                                           )
                                         }
+                                        disabled={actionLoading}
                                       >
                                         <CheckCircle className="w-4 h-4" />
                                         Mark Completed
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        className="gap-2 text-gray-600"
-                                        onClick={() =>
-                                          updateAppointmentStatus(
-                                            apt.id,
-                                            "no_show",
-                                          )
-                                        }
-                                      >
-                                        <AlertCircle className="w-4 h-4" />
-                                        Mark No Show
-                                      </DropdownMenuItem>
-                                    </>
-                                  )}
+                                    )}
 
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
@@ -876,6 +941,23 @@ export default function AllAppointments() {
                                   >
                                     <XCircle className="w-4 h-4" />
                                     Cancel
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+
+                              {(apt.status === "cancelled" ||
+                                apt.status === "completed" ||
+                                apt.status === "rejected" ||
+                                apt.status === "no_show") && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="gap-2 text-destructive"
+                                    onClick={() => deleteAppointment(apt.id)}
+                                    disabled={actionLoading}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete Permanently
                                   </DropdownMenuItem>
                                 </>
                               )}
