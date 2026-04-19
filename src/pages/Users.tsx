@@ -212,7 +212,7 @@ const transformApiUser = (apiUser: ApiUser) => ({
 });
 
 export default function UsersPage() {
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRole, setSelectedRole] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");

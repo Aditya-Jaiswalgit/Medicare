@@ -104,7 +104,7 @@ const defaultFormData = {
 
 export default function PharmacyMedicinesPage() {
   const { token, isLoading: authLoading } = useAuth();
-  const role = localStorage.getItem("role");
+  const role = sessionStorage.getItem("role");
 
   // State
   const [medicines, setMedicines] = useState<Medicine[]>([]);

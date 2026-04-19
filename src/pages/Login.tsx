@@ -109,7 +109,7 @@ export default function Login() {
           </div>
 
           <p className="text-sm text-white/40">
-            © 2024 MediCare. All rights reserved.
+            � 2024 MediCare. All rights reserved.
           </p>
         </div>
       </div>
@@ -200,7 +200,7 @@ export default function Login() {
             >
               {isLoading ? (
                 <span className="flex items-center gap-2">
-                  ⏳ Signing in...
+                  ? Signing in...
                 </span>
               ) : (
                 <span className="flex items-center gap-2">

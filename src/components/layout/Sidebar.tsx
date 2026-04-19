@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/types/clinic";
@@ -101,12 +101,6 @@ import {
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import {
-  fetchPermissionMapByRole,
-  fetchUserRoles,
-  normalizeMenuName,
-  normalizeRoleName,
-} from "@/lib/role-management";
 
 interface NavItem {
   label: string;
@@ -268,8 +262,8 @@ const simpleNavItems: Record<
 > = {
   super_admin: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { label: "Create Clinic", href: "/create/Clinic", icon: Hospital },
-    { label: "Clinic Management", href: "/clinics", icon: Settings },
+    { label: "Create Clinic", href: "/create/clinic", icon: Hospital },
+    { label: "Clinic Management", href: "/Clinics", icon: Settings },
     { label: "Role Permissions", href: "/role-permissions", icon: UserCog },
   ],
   pharmacist: [
@@ -299,80 +293,12 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-const menuAliases: Record<string, string[]> = {
-  appointments: ["all appointments", "book appointment", "my appointments"],
-  billing: ["payments", "invoices", "history", "bills"],
-  "clinic management": ["clinics"],
-  communication: ["reminders", "notifications"],
-  "daily reports": ["reports", "daily report"],
-  doctors: ["doctor"],
-  "lab tests": ["lab", "tests"],
-  patients: ["patient", "my patients"],
-  pharmacy: ["medicines"],
-  queue: ["token generation", "token", "check-in", "call patient", "queue list"],
-  reports: ["daily reports"],
-  "role permissions": ["permissions", "permission"],
-  users: ["user"],
-};
-
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, role, logout } = useAuth();
   const location = useLocation();
   const [expandedGroups, setExpandedGroups] = useState<string[]>(["Dashboard"]);
-  const [permissionConfigLoaded, setPermissionConfigLoaded] = useState(false);
-  const [allowedMenus, setAllowedMenus] = useState<string[]>([]);
 
-  useEffect(() => {
-    let active = true;
-
-    const loadSidebarPermissions = async () => {
-      if (!role) {
-        if (active) {
-          setPermissionConfigLoaded(false);
-          setAllowedMenus([]);
-        }
-        return;
-      }
-
-      try {
-        const roles = await fetchUserRoles();
-        const matchedRole = roles.find(
-          (item) => normalizeRoleName(item.role) === normalizeRoleName(role),
-        );
-
-        if (!matchedRole) {
-          if (active) {
-            setPermissionConfigLoaded(false);
-            setAllowedMenus([]);
-          }
-          return;
-        }
-
-        const permissionMap = await fetchPermissionMapByRole(matchedRole.role_id);
-        if (!active) {
-          return;
-        }
-
-        const visibleMenus = Object.entries(permissionMap)
-          .filter(([, permissions]) => permissions.view)
-          .map(([menuName]) => normalizeMenuName(menuName));
-
-        setAllowedMenus(visibleMenus);
-        setPermissionConfigLoaded(true);
-      } catch (error) {
-        if (active) {
-          setPermissionConfigLoaded(false);
-          setAllowedMenus([]);
-        }
-      }
-    };
-
-    void loadSidebarPermissions();
-
-    return () => {
-      active = false;
-    };
-  }, [role]);
+  if (!role) return null;
 
   const toggleGroup = (label: string) => {
     setExpandedGroups((prev) =>
@@ -410,20 +336,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     if (window.innerWidth < 1024) {
       onClose();
     }
-  };
-
-  const isMenuAllowed = (label: string) => {
-    if (label === "Dashboard") {
-      return true;
-    }
-
-    if (!permissionConfigLoaded) {
-      return true;
-    }
-
-    const normalized = normalizeMenuName(label);
-    const aliases = menuAliases[normalized] || [];
-    return [normalized, ...aliases].some((item) => allowedMenus.includes(item));
   };
 
   const renderNavItem = (item: NavItem) => {
@@ -492,29 +404,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     );
   };
 
-  const rawNavConfig: NavConfig =
+  const navConfig: NavConfig =
     role === "clinic_admin"
       ? clinicAdminNav
       : role === "doctor"
         ? doctorNav
         : role === "receptionist"
           ? receptionistNav
-          : role
-            ? simpleNavItems[role]
-            : [];
-
-  const navConfig = useMemo(
-    () =>
-      rawNavConfig.filter((item) => {
-        if (isNavGroup(item)) {
-          return isMenuAllowed(item.label) || item.items.some((child) => isMenuAllowed(child.label));
-        }
-        return isMenuAllowed(item.label);
-      }),
-    [rawNavConfig, allowedMenus, permissionConfigLoaded],
-  );
-
-  if (!role) return null;
+          : simpleNavItems[role];
 
   return (
     <>

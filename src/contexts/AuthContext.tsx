@@ -1,9 +1,9 @@
 import React, {
   createContext,
   useContext,
-  ReactNode,
   useState,
   useEffect,
+  ReactNode,
 } from "react";
 import { User, UserRole } from "@/types/clinic";
 
@@ -28,9 +28,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const restoreAuth = () => {
       try {
-        const token = localStorage.getItem("token");
-        const savedUser = localStorage.getItem("user");
-        const savedRole = localStorage.getItem("role");
+        const token = sessionStorage.getItem("token");
+        const savedUser = sessionStorage.getItem("user");
+        const savedRole = sessionStorage.getItem("role");
 
         if (token && savedUser && savedRole) {
           setUser(JSON.parse(savedUser));
@@ -39,9 +39,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error("Failed to restore auth state:", error);
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        localStorage.removeItem("role");
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("user");
+        sessionStorage.removeItem("role");
       } finally {
         setIsLoading(false);
       }
@@ -76,9 +76,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRole(user.role as UserRole);
       if (token) {
         setToken(token);
-        localStorage.setItem("token", token);
-        localStorage.setItem("user", JSON.stringify(user));
-        localStorage.setItem("role", user.role);
+        sessionStorage.setItem("token", token);
+        sessionStorage.setItem("user", JSON.stringify(user));
+        sessionStorage.setItem("role", user.role);
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       const response = await fetch("http://localhost:5000/api/auth/logout", {
         method: "POST",
@@ -107,9 +107,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setRole(null);
       setToken(null);
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      localStorage.removeItem("role");
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("user");
+      sessionStorage.removeItem("role");
     }
   };
 

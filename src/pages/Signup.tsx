@@ -10,7 +10,7 @@ const iconProps = {
   strokeLinejoin: "round" as const,
 };
 
-// ── Floating animated pill ────────────────────────────────────────
+// -- Floating animated pill ----------------------------------------
 function FloatPill({
   style,
   animDuration,
@@ -57,7 +57,7 @@ function FloatPill({
   );
 }
 
-// ── Feature row ───────────────────────────────────────────────────
+// -- Feature row ---------------------------------------------------
 function FeatureRow({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
     <div className="flex items-center gap-3">
@@ -69,7 +69,7 @@ function FeatureRow({ icon, text }: { icon: React.ReactNode; text: string }) {
   );
 }
 
-// ── Left panel ────────────────────────────────────────────────────
+// -- Left panel ----------------------------------------------------
 function LeftPanel() {
   return (
     <div className="relative flex flex-col justify-between p-12 overflow-hidden bg-gradient-to-br from-[#0f1923] via-[#0f2d1f] to-[#0d9488]/40 min-h-screen">
@@ -148,7 +148,7 @@ function LeftPanel() {
         </h2>
 
         <p className="text-[16px] text-white/60 leading-[1.7] max-w-[360px] mb-10">
-          From patient records to billing — everything your practice needs,
+          From patient records to billing � everything your practice needs,
           beautifully organised in one place.
         </p>
 
@@ -192,7 +192,7 @@ function LeftPanel() {
           />
         </div>
 
-        {/* Floating pills — relative to this column */}
+        {/* Floating pills � relative to this column */}
         <div className="relative mt-14 h-28">
           <FloatPill
             style={{ bottom: 0, left: 0 }}
@@ -260,7 +260,7 @@ function LeftPanel() {
   );
 }
 
-// ── Right panel — form ────────────────────────────────────────────
+// -- Right panel � form --------------------------------------------
 function SignupForm() {
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -580,7 +580,7 @@ function SignupForm() {
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────
+// -- Page ----------------------------------------------------------
 export default function SignupPage() {
   return (
     <>

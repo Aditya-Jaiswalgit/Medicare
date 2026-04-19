@@ -54,7 +54,7 @@ export default function SubscriptionsPage() {
   };
 
   const handleSelectPlan = (plan: Plan) => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
 
     // If not logged in, redirect to login
     if (!token) {

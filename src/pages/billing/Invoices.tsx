@@ -93,7 +93,7 @@ const statusConfig: Record<
 export default function InvoicesPage() {
   const navigate = useNavigate();
   const { token, isLoading: authLoading } = useAuth();
-  const role = localStorage.getItem("role");
+  const role = sessionStorage.getItem("role");
   const [bills, setBills] = useState<MedicineBill[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");

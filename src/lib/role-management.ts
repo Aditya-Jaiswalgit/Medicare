@@ -40,7 +40,8 @@ type ApiResponse<T> = {
 };
 
 function getAuthHeaders(headers?: HeadersInit): HeadersInit {
-  const token = localStorage.getItem("token");
+  const token =
+    sessionStorage.getItem("token") || localStorage.getItem("token");
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

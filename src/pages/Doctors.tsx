@@ -125,7 +125,7 @@ const transformApiDoctor = (apiDoctor: ApiDoctor): Doctor => {
 };
 
 export default function DoctorsPage() {
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSpecialization, setSelectedSpecialization] = useState(
     "All Specializations",

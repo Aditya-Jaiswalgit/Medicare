@@ -269,7 +269,7 @@ export default function Clinics() {
   const fetchClinics = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       const response = await fetch(
         "http://localhost:5000/api/super-admin/clinics",
         {
@@ -303,7 +303,7 @@ export default function Clinics() {
     setIsLoadingAdmins(true);
     setClinicAdmins([]);
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       const response = await fetch(
         "http://localhost:5000/api/super-admin/clinic-admins?limit=100",
         {
@@ -364,7 +364,7 @@ export default function Clinics() {
 
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       const response = await fetch(
         `http://localhost:5000/api/super-admin/clinics/${selectedClinic.id}`,
         {
@@ -406,7 +406,7 @@ export default function Clinics() {
 
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       const response = await fetch(
         `http://localhost:5000/api/super-admin/clinic-admins/${selectedClinicAdmin.id}`,
         {
@@ -490,7 +490,7 @@ export default function Clinics() {
 
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       const response = await fetch(
         "http://localhost:5000/api/super-admin/clinic-admins",
         {
@@ -541,7 +541,7 @@ export default function Clinics() {
 
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       const response = await fetch(
         `http://localhost:5000/api/super-admin/clinic-admins/${selectedClinicAdmin.id}`,
         {
@@ -595,7 +595,7 @@ export default function Clinics() {
 
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       const response = await fetch(
         `http://localhost:5000/api/super-admin/clinics/${selectedClinic.id}`,
         {
