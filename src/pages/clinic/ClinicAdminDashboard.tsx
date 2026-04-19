@@ -28,7 +28,7 @@ export function ClinicAdminDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = sessionStorage.getItem("token");
         const response = await fetch(
           "http://localhost:5000/api/clinic-admin/dashboard",
           {

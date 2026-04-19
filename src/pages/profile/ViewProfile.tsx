@@ -72,7 +72,7 @@ export default function ViewProfile() {
   const fetchProfile = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       const response = await fetch("http://localhost:5000/api/auth/profile", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -107,7 +107,7 @@ export default function ViewProfile() {
   const handleUpdate = async () => {
     setIsSaving(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       const response = await fetch("http://localhost:5000/api/auth/profile", {
         method: "PUT",
         headers: {

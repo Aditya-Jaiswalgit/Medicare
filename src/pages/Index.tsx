@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSaasAuth } from "@/contexts/SaaSAuthContext";
 
 // ── SVG Icon helpers ──────────────────────────────────────────────
 const iconProps = {
@@ -43,33 +44,7 @@ const prices = {
   annual: { starter: "0", pro: "2,399", enterprise: "6,399" },
 };
 
-// ── Auth hooks ────────────────────────────────────────────────────
-function useCurrentUser() {
-  return {
-    isLoggedIn: true,
-    name: "Admin",
-    email: "admin@citycare.com",
-    plan: "free" as "free" | "professional" | "enterprise",
-    usage: {
-      patients: { used: 0, limit: 50 },
-      doctors: { used: 0, limit: 1 },
-    },
-  };
-}
-
-function useAuth() {
-  return {
-    isLoggedIn: true,
-    user: {
-      name: "Dr. Rahul Sharma",
-      email: "rahul@cityclinic.com",
-      initials: "RS",
-    },
-    plan: "free" as "free" | "professional" | "enterprise",
-  };
-}
-
-// ── Plan configuration ─────────────────────────────────────────────
+// ── Plan configuration ─��───────────────────────────────────────────
 const PLAN_CONFIG = {
   free: {
     label: "Free plan",
@@ -125,29 +100,39 @@ function UsageBar({ used, limit }: { used: number; limit: number | null }) {
 function ProfileMenu() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  const user = useCurrentUser();
-  const plan = PLAN_CONFIG[user.plan];
+  const { user, logout } = useSaasAuth();
 
-  if (!user.isLoggedIn) return null;
+  if (!user) return null;
 
-  const initials = user.name
+  // Get plan from user data or default to free
+  const plan: "free" | "professional" | "enterprise" = "free";
+  const planConfig = PLAN_CONFIG[plan];
+
+  const initials = user.full_name
     .split(" ")
     .map((w) => w[0])
     .slice(0, 2)
-    .join("");
+    .join("")
+    .toUpperCase();
+
+  const handleLogout = async () => {
+    setOpen(false);
+    await logout();
+    navigate("/signin");
+  };
 
   return (
     <div className="relative flex items-center gap-3">
       {/* Plan badge */}
       <span
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium ${plan.badgeClass}`}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium ${planConfig.badgeClass}`}
       >
-        <span className={`w-1.5 h-1.5 rounded-full ${plan.dot}`} />
-        {plan.label}
+        <span className={`w-1.5 h-1.5 rounded-full ${planConfig.dot}`} />
+        {planConfig.label}
       </span>
 
       {/* Upgrade button */}
-      {plan.showUpgrade && (
+      {planConfig.showUpgrade && (
         <button
           onClick={() => {
             document
@@ -178,7 +163,7 @@ function ProfileMenu() {
             </div>
             <div>
               <div className="text-[14px] font-semibold text-[#0f1923]">
-                {user.name}
+                {user.full_name}
               </div>
               <div className="text-[12px] text-[#6b7a8d]">{user.email}</div>
             </div>
@@ -192,10 +177,12 @@ function ProfileMenu() {
             <div className="bg-[#f8fafb] rounded-xl p-3">
               <div className="flex items-center justify-between mb-2.5">
                 <span className="text-[13px] font-medium text-[#0f1923] flex items-center gap-1.5">
-                  <span className={`w-1.5 h-1.5 rounded-full ${plan.dot}`} />
-                  {plan.label}
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${planConfig.dot}`}
+                  />
+                  {planConfig.label}
                 </span>
-                {plan.showUpgrade && (
+                {planConfig.showUpgrade && (
                   <button
                     onClick={() => {
                       setOpen(false);
@@ -214,17 +201,11 @@ function ProfileMenu() {
                   <div className="text-[12px] text-[#6b7a8d] mb-1">
                     Patients
                   </div>
-                  <UsageBar
-                    used={user.usage.patients.used}
-                    limit={user.usage.patients.limit}
-                  />
+                  <UsageBar used={0} limit={50} />
                 </div>
                 <div>
                   <div className="text-[12px] text-[#6b7a8d] mb-1">Doctors</div>
-                  <UsageBar
-                    used={user.usage.doctors.used}
-                    limit={user.usage.doctors.limit}
-                  />
+                  <UsageBar used={0} limit={1} />
                 </div>
               </div>
             </div>
@@ -250,13 +231,10 @@ function ProfileMenu() {
             ))}
             <div className="h-px bg-[#e4eaf0] my-1" />
             <button
-              onClick={() => {
-                setOpen(false);
-                navigate("/login");
-              }}
-              className="w-full text-left px-4 py-2 text-[13px] text-blue-600 hover:bg-red-50 border-none bg-transparent cursor-pointer transition-colors"
+              onClick={handleLogout}
+              className="w-full text-left px-4 py-2 text-[13px] text-red-600 hover:bg-red-50 border-none bg-transparent cursor-pointer transition-colors"
             >
-              Login In System
+              Logout
             </button>
           </div>
         </div>
@@ -273,7 +251,7 @@ function Navbar() {
     }
   };
   const navigate = useNavigate();
-  const user = useCurrentUser();
+  const { user, isAuthenticated } = useSaasAuth();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-15 py-[18px] bg-white/90 backdrop-blur-xl border-b border-[#e4eaf0]">
@@ -317,11 +295,11 @@ function Navbar() {
         >
           About
         </button>
-        {user.isLoggedIn ? (
+        {isAuthenticated && user ? (
           <ProfileMenu />
         ) : (
           <button
-            onClick={() => navigate("/login")}
+            onClick={() => navigate("/signin")}
             className="px-4 py-2 bg-[#059669] text-white rounded-lg text-sm font-medium border-none cursor-pointer hover:bg-[#047857] transition-colors"
           >
             Login

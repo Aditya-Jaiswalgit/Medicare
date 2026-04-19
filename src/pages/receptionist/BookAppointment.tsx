@@ -64,7 +64,7 @@ export default function BookAppointment() {
   const [loading, setLoading] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const role = localStorage.getItem("role");
+  const role = sessionStorage.getItem("role");
   // Form state
   const [patientSearch, setPatientSearch] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);

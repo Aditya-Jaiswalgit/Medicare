@@ -43,6 +43,7 @@ import SubscriptionsPage from "./pages/subscriptions";
 import SignupPage from "./pages/Signup";
 import SignInPage from "./pages/SignIn";
 import MyPatients from "./pages/doctor/MyPatients";
+import { SaasAuthProvider } from "./contexts/SaaSAuthContext";
 
 const queryClient = new QueryClient();
 
@@ -444,15 +445,17 @@ const AppRoutes = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
+    <SaasAuthProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </SaasAuthProvider>
   </QueryClientProvider>
 );
 

@@ -35,7 +35,7 @@ interface ApiResponse {
 }
 
 export default function ClinicProfilePage() {
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
   const [loading, setLoading] = useState(true);
   const [clinicData, setClinicData] = useState<ClinicData | null>(null);
 

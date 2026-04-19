@@ -1,6 +1,6 @@
 // Utility function to make authenticated API requests
 export const apiRequest = async (url: string, options: RequestInit = {}) => {
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
 
   const headers: HeadersInit = {
     "Content-Type": "application/json",

@@ -84,8 +84,8 @@ export default function PatientsPage() {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
-  // Get role from localStorage with fallback
-  const role = localStorage.getItem("role") || "doctor";
+  // Get role from sessionStorage with fallback
+  const role = sessionStorage.getItem("role") || "doctor";
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -141,7 +141,7 @@ export default function PatientsPage() {
   const fetchPatients = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       // Validate token and role
       if (!token) {
@@ -177,7 +177,7 @@ export default function PatientsPage() {
       if (!response.ok) {
         if (response.status === 401) {
           toast.error("Unauthorized. Please log in again.");
-          localStorage.clear();
+          sessionStorage.clear();
           window.location.href = "/login";
           return;
         }
@@ -253,7 +253,7 @@ export default function PatientsPage() {
     newStatus: "Active" | "Inactive",
   ) => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       if (!token) {
         toast.error("Authentication required");
@@ -336,7 +336,7 @@ export default function PatientsPage() {
 
   const handleConfirmBooking = async (appointmentData: AppointmentFormData) => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       if (!token) {
         toast.error("Authentication required");

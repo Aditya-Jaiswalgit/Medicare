@@ -120,7 +120,7 @@ export function AddPatientDialog({
   const handleSubmit = async (data: PatientFormValues) => {
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       // Prepare API payload
       const payload = {

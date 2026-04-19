@@ -108,7 +108,7 @@ const paymentModeIcons: Record<PaymentMode, React.ElementType> = {
 
 export default function CreateInvoicePage() {
   const navigate = useNavigate();
-  const role = localStorage.getItem("role");
+  const role = sessionStorage.getItem("role");
   const { token, isLoading: authLoading } = useAuth();
 
   // Data from API

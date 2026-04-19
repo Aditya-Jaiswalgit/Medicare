@@ -9,6 +9,63 @@ const iconProps = {
   strokeLinejoin: "round" as const,
 };
 
+// ── API Integration ────────────────────────────────────────────
+const API_BASE_URL = "http://localhost:5000/api/auth";
+
+interface SignInPayload {
+  email: string;
+  password: string;
+}
+
+interface ApiError {
+  field: string;
+  message: string;
+}
+
+interface ApiResponse {
+  success: boolean;
+  message?: string;
+  token?: string;
+  errors?: ApiError[];
+}
+
+async function submitSignIn(data: SignInPayload): Promise<ApiResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/signin`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        errors: result.errors || [
+          { field: "general", message: result.message || "Sign in failed" },
+        ],
+      };
+    }
+
+    // Store token if provided
+    if (result.token) {
+      localStorage.setItem("authToken", result.token);
+    }
+
+    return { success: true, message: result.message, token: result.token };
+  } catch (error) {
+    return {
+      success: false,
+      errors: [
+        { field: "general", message: "Network error. Please try again." },
+      ],
+    };
+  }
+}
+
 // ── Floating animated pill ────────────────────────────────────────
 function FloatPill({
   style,
@@ -56,7 +113,7 @@ function FloatPill({
   );
 }
 
-// ── Feature row ───────────────────────────────────────────────────
+// ── Feature row ────────��──────────────────────────────────────────
 function FeatureRow({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
     <div className="flex items-center gap-3">
@@ -71,7 +128,7 @@ function FeatureRow({ icon, text }: { icon: React.ReactNode; text: string }) {
 // ── Left panel ────────────────────────────────────────────────────
 function LeftPanel() {
   return (
-    <div className="relative flex flex-col justify-between p-12 overflow-hidden bg-gradient-to-br from-[#0f1923] via-[#0f2d1f] to-[#0d9488]/40 min-h-screen">
+    <div className="relative hidden lg:flex flex-col justify-between p-8 lg:p-12 overflow-hidden bg-gradient-to-br from-[#0f1923] via-[#0f2d1f] to-[#0d9488]/40 min-h-screen">
       {/* Blobs */}
       <div className="absolute top-[-80px] left-[-80px] w-72 h-72 bg-[#059669] rounded-full opacity-20 blur-[80px] pointer-events-none" />
       <div className="absolute bottom-[-60px] right-[-60px] w-64 h-64 bg-[#0d9488] rounded-full opacity-20 blur-[80px] pointer-events-none" />
@@ -260,38 +317,91 @@ function LeftPanel() {
 }
 
 // ── Right panel — form ────────────────────────────────────────────
-function SignupForm() {
+function SignInForm() {
   const [showPass, setShowPass] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
     email: "",
     password: "",
-    confirm: "",
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [successMessage, setSuccessMessage] = useState("");
+  const [generalError, setGeneralError] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((p) => ({ ...p, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setFormData((p) => ({ ...p, [name]: value }));
+    if (errors[name]) {
+      setErrors((p) => ({ ...p, [name]: "" }));
+    }
+    if (generalError) {
+      setGeneralError("");
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Please provide a valid email";
+    }
+
+    if (!formData.password) {
+      newErrors.password = "Password is required";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // handle submission
+    setSuccessMessage("");
+    setGeneralError("");
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+
+    const result = await submitSignIn(formData);
+
+    setLoading(false);
+
+    if (result.success) {
+      setSuccessMessage(result.message || "Sign in successful!");
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 1500);
+    } else if (result.errors) {
+      const errorMap: Record<string, string> = {};
+      result.errors.forEach((err) => {
+        if (err.field === "general") {
+          setGeneralError(err.message);
+        } else {
+          errorMap[err.field] = err.message;
+        }
+      });
+      setErrors(errorMap);
+    }
   };
 
   return (
-    <div className="flex flex-col justify-start px-12 bg-[#f8fafb] min-h-screen overflow-y-auto pt-10">
+    <div className="flex flex-col justify-center px-4 sm:px-6 md:px-12 bg-[#f8fafb] min-h-screen overflow-y-auto py-8 sm:py-10">
       <div className="max-w-[440px] w-full mx-auto">
         {/* Header */}
-        <div className="mb-9">
+        <div className="mb-8 sm:mb-9">
           <h1
             style={{ fontFamily: "'Fraunces', serif" }}
-            className="text-[32px] font-bold text-[#0f1923] mb-2 leading-tight"
+            className="text-2xl sm:text-3xl md:text-[32px] font-bold text-[#0f1923] mb-2 leading-tight"
           >
             Sign In
           </h1>
-          <p className="text-[15px] text-[#6b7a8d]">
-            Don't have an Account ?{" "}
+          <p className="text-sm sm:text-[15px] text-[#6b7a8d]">
+            Don't have an account?{" "}
             <a
               href="/signup"
               className="text-[#059669] font-medium hover:underline"
@@ -301,13 +411,30 @@ function SignupForm() {
           </p>
         </div>
 
+        {/* General Error Message */}
+        {generalError && (
+          <div className="mb-6 p-3 sm:p-3.5 bg-red-50 border border-red-200 rounded-lg text-sm sm:text-[14px] text-red-600">
+            {generalError}
+          </div>
+        )}
+
+        {/* Success Message */}
+        {successMessage && (
+          <div className="mb-6 p-3 sm:p-3.5 bg-[#d1fae5] border border-[#059669] rounded-lg text-sm sm:text-[14px] text-[#065f46]">
+            {successMessage}
+          </div>
+        )}
+
         {/* Google button */}
         <button
           type="button"
-          className="w-full flex items-center justify-center gap-3 px-5 py-3.5 bg-white border-[1.5px] border-[#e4eaf0] rounded-xl text-[15px] font-medium text-[#0f1923] cursor-pointer transition-all hover:border-[#0f1923] hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] hover:-translate-y-px mb-6"
+          className="w-full flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 sm:py-3.5 bg-white border-[1.5px] border-[#e4eaf0] rounded-xl text-sm sm:text-[15px] font-medium text-[#0f1923] cursor-pointer transition-all hover:border-[#0f1923] hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] hover:-translate-y-px mb-6"
         >
-          {/* Google SVG logo */}
-          <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
+          <svg
+            viewBox="0 0 24 24"
+            className="w-4 sm:w-5 h-4 sm:h-5"
+            fill="none"
+          >
             <path
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
               fill="#4285F4"
@@ -325,26 +452,28 @@ function SignupForm() {
               fill="#EA4335"
             />
           </svg>
-          Continue with Google
+          <span className="hidden xs:inline">Continue with Google</span>
+          <span className="xs:hidden text-xs">Google</span>
         </button>
 
         {/* Divider */}
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-3 sm:gap-4 mb-6">
           <div className="flex-1 h-px bg-[#e4eaf0]" />
-          <span className="text-[13px] text-[#6b7a8d] font-medium">
-            or sign up with email
+          <span className="text-xs sm:text-[13px] text-[#6b7a8d] font-medium px-2">
+            or sign in with email
           </span>
           <div className="flex-1 h-px bg-[#e4eaf0]" />
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* Email */}
           <div>
-            <label className="block text-[13px] font-medium text-[#3a4a5c] mb-1.5">
+            <label className="block text-xs sm:text-[13px] font-medium text-[#3a4a5c] mb-1.5">
               Email Address
             </label>
             <div className="relative">
-              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#6b7a8d]">
+              <div className="absolute left-3 sm:left-3.5 top-1/2 -translate-y-1/2 text-[#6b7a8d]">
                 <svg {...iconProps} className="w-4 h-4">
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                   <polyline points="22,6 12,13 2,6" />
@@ -356,19 +485,35 @@ function SignupForm() {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="Enter email"
-                className="w-full pl-10 pr-4 py-3 bg-white border-[1.5px] border-[#e4eaf0] rounded-xl text-[15px] text-[#0f1923] placeholder:text-[#b0bcc9] outline-none transition-all focus:border-[#059669] focus:shadow-[0_0_0_3px_rgba(5,150,105,0.1)]"
-                required
+                className={`w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2.5 sm:py-3 bg-white border-[1.5px] rounded-xl text-sm sm:text-[15px] text-[#0f1923] placeholder:text-[#b0bcc9] outline-none transition-all ${
+                  errors.email
+                    ? "border-red-400 focus:border-red-400 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.1)]"
+                    : "border-[#e4eaf0] focus:border-[#059669] focus:shadow-[0_0_0_3px_rgba(5,150,105,0.1)]"
+                }`}
               />
             </div>
+            {errors.email && (
+              <p className="text-xs sm:text-[12px] text-red-500 mt-1.5">
+                {errors.email}
+              </p>
+            )}
           </div>
 
           {/* Password */}
           <div>
-            <label className="block text-[13px] font-medium text-[#3a4a5c] mb-1.5">
-              Password
-            </label>
+            <div className="flex justify-between items-center mb-1.5">
+              <label className="block text-xs sm:text-[13px] font-medium text-[#3a4a5c]">
+                Password
+              </label>
+              <a
+                href="/forgot-password"
+                className="text-xs sm:text-[12px] text-[#059669] hover:underline font-medium"
+              >
+                Forgot?
+              </a>
+            </div>
             <div className="relative">
-              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#6b7a8d]">
+              <div className="absolute left-3 sm:left-3.5 top-1/2 -translate-y-1/2 text-[#6b7a8d]">
                 <svg {...iconProps} className="w-4 h-4">
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                   <path d="M7 11V7a5 5 0 0 1 10 0v4" />
@@ -379,15 +524,17 @@ function SignupForm() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Min. 8 characters"
-                className="w-full pl-10 pr-11 py-3 bg-white border-[1.5px] border-[#e4eaf0] rounded-xl text-[15px] text-[#0f1923] placeholder:text-[#b0bcc9] outline-none transition-all focus:border-[#059669] focus:shadow-[0_0_0_3px_rgba(5,150,105,0.1)]"
-                required
-                minLength={8}
+                placeholder="Enter password"
+                className={`w-full pl-9 sm:pl-10 pr-10 sm:pr-11 py-2.5 sm:py-3 bg-white border-[1.5px] rounded-xl text-sm sm:text-[15px] text-[#0f1923] placeholder:text-[#b0bcc9] outline-none transition-all ${
+                  errors.password
+                    ? "border-red-400 focus:border-red-400 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.1)]"
+                    : "border-[#e4eaf0] focus:border-[#059669] focus:shadow-[0_0_0_3px_rgba(5,150,105,0.1)]"
+                }`}
               />
               <button
                 type="button"
                 onClick={() => setShowPass((p) => !p)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#6b7a8d] hover:text-[#3a4a5c] transition-colors bg-transparent border-none cursor-pointer p-0"
+                className="absolute right-3 sm:right-3.5 top-1/2 -translate-y-1/2 text-[#6b7a8d] hover:text-[#3a4a5c] transition-colors bg-transparent border-none cursor-pointer p-0"
               >
                 {showPass ? (
                   <svg {...iconProps} className="w-4 h-4">
@@ -403,85 +550,83 @@ function SignupForm() {
                 )}
               </button>
             </div>
-
-            {/* Password strength */}
-            {formData.password.length > 0 && (
-              <div className="mt-2">
-                <div className="flex gap-1 mb-1">
-                  {[...Array(4)].map((_, i) => {
-                    const strength = Math.min(
-                      4,
-                      Math.floor(formData.password.length / 2),
-                    );
-                    return (
-                      <div
-                        key={i}
-                        className="h-1 flex-1 rounded-full transition-all duration-300"
-                        style={{
-                          background:
-                            i < strength
-                              ? strength <= 1
-                                ? "#ef4444"
-                                : strength <= 2
-                                  ? "#f59e0b"
-                                  : strength <= 3
-                                    ? "#3b82f6"
-                                    : "#059669"
-                              : "#e4eaf0",
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-                <span className="text-[11px] text-[#6b7a8d]">
-                  {formData.password.length < 4
-                    ? "Weak"
-                    : formData.password.length < 6
-                      ? "Fair"
-                      : formData.password.length < 8
-                        ? "Good"
-                        : "Strong"}
-                </span>
-              </div>
+            {errors.password && (
+              <p className="text-xs sm:text-[12px] text-red-500 mt-1.5">
+                {errors.password}
+              </p>
             )}
           </div>
 
-          {/* Terms */}
-          <label className="flex items-start gap-3 cursor-pointer group mt-1">
+          {/* Remember Me */}
+          <label className="flex items-center gap-2 cursor-pointer mt-1">
             <input
               type="checkbox"
-              required
-              className="mt-0.5 w-4 h-4 accent-[#059669] cursor-pointer"
+              className="w-4 h-4 accent-[#059669] cursor-pointer"
             />
-            <span className="text-[13px] text-[#6b7a8d] leading-[1.5]">
-              I agree to the{" "}
-              <a
-                href="#"
-                className="text-[#059669] hover:underline font-medium"
-              >
-                Terms of Service
-              </a>{" "}
-              and{" "}
-              <a
-                href="#"
-                className="text-[#059669] hover:underline font-medium"
-              >
-                Privacy Policy
-              </a>
+            <span className="text-xs sm:text-[13px] text-[#6b7a8d]">
+              Keep me signed in
             </span>
           </label>
 
           {/* Submit */}
           <button
             type="submit"
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border-none text-white text-[15px] font-semibold cursor-pointer transition-all mt-1 bg-gradient-to-r from-[#059669] to-[#0d9488] shadow-[0_4px_20px_rgba(5,150,105,0.3)] hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgba(5,150,105,0.4)]"
+            disabled={loading}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 sm:py-3.5 rounded-xl border-none text-white text-sm sm:text-[15px] font-semibold cursor-pointer transition-all mt-2 sm:mt-4 ${
+              loading
+                ? "bg-gray-400 opacity-50 cursor-not-allowed"
+                : "bg-gradient-to-r from-[#059669] to-[#0d9488] shadow-[0_4px_20px_rgba(5,150,105,0.3)] hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgba(5,150,105,0.4)]"
+            }`}
           >
-            Create Account
-            <svg {...iconProps} className="w-4 h-4" strokeWidth={2.5}>
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
+            {loading ? (
+              <>
+                <svg
+                  className="animate-spin h-4 w-4"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                <span className="hidden xs:inline">Signing In...</span>
+                <span className="xs:hidden">Signing...</span>
+              </>
+            ) : (
+              <>
+                Sign In
+                <svg {...iconProps} className="w-4 h-4" strokeWidth={2.5}>
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </>
+            )}
           </button>
         </form>
+
+        {/* Footer */}
+        <div className="mt-6 pt-6 border-t border-[#e4eaf0] text-center">
+          <p className="text-xs sm:text-[13px] text-[#6b7a8d]">
+            By signing in, you agree to our{" "}
+            <a href="#" className="text-[#059669] hover:underline">
+              Terms
+            </a>{" "}
+            and{" "}
+            <a href="#" className="text-[#059669] hover:underline">
+              Privacy Policy
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -495,9 +640,9 @@ export default function SignInPage() {
         href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap"
         rel="stylesheet"
       />
-      <div className="font-['DM_Sans',sans-serif] grid grid-cols-[1fr_1fr] min-h-screen">
+      <div className="font-['DM_Sans',sans-serif] grid grid-cols-1 lg:grid-cols-[1fr_1fr] min-h-screen">
         <LeftPanel />
-        <SignupForm />
+        <SignInForm />
       </div>
     </>
   );

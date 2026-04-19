@@ -153,7 +153,7 @@ export default function AllAppointments() {
   const { user, token, isLoading: authLoading } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
-  const role = localStorage.getItem("role");
+  const role = sessionStorage.getItem("role");
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
